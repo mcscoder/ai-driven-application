@@ -1,0 +1,966 @@
+{
+  "version": 1,
+  "description": "Live demo-readiness scenarios for Graphiti Chat Lab companion memory.",
+  "cases": [
+    {
+      "id": "everyday_001",
+      "category": "everyday_memory",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung."
+      ],
+      "probe_message": "Nếu cuối tuần tui muốn ra ngoài làm khóa luận thì nên chọn kiểu quán nào?",
+      "expected_memory": ["quán cà phê yên tĩnh", "ít nhạc", "có ổ cắm", "làm việc lâu"],
+      "forbidden_memory": ["quán đông người", "nhạc lớn"],
+      "judge_notes": "Answer should recommend the remembered quiet cafe style, not generic cafe advice."
+    },
+    {
+      "id": "everyday_002",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+        "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui."
+      ],
+      "probe_message": "Tối nay ăn phở được không, có gì cần dặn quán không?",
+      "expected_memory": ["không ăn rau mùi", "né rau mùi"],
+      "forbidden_memory": ["ăn rau mùi"],
+      "judge_notes": "Should mention avoiding coriander/rau mùi if giving food advice."
+    },
+    {
+      "id": "everyday_003",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+        "Tui đang muốn giảm thói quen thức khuya lại."
+      ],
+      "probe_message": "Nếu tối nay tui lại muốn code tới khuya thì nhắc tui sao cho hợp lý?",
+      "expected_memory": ["thức khuya code", "2 giờ sáng", "dậy rất đuối", "giảm thói quen thức khuya"],
+      "forbidden_memory": ["khuyến khích thức tới 2 giờ"],
+      "judge_notes": "Should use the remembered sleep habit gently."
+    },
+    {
+      "id": "everyday_004",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.",
+        "Còn khi nghiêm túc thì gọi tui bằng tôi cũng được."
+      ],
+      "probe_message": "Nói chuyện với tui bình thường thì nên xưng hô sao?",
+      "expected_memory": ["gọi tui là ông", "tự nhiên hơn gọi bạn"],
+      "forbidden_memory": ["gọi bạn là mặc định"],
+      "judge_notes": "Should recall the preferred casual address."
+    },
+    {
+      "id": "everyday_005",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thích câu trả lời thẳng, ngắn, có ý chính trước.",
+        "Nếu giải thích dài thì tui dễ mất kiên nhẫn."
+      ],
+      "probe_message": "Khi góp ý hướng làm của tui thì ông nên nói kiểu gì?",
+      "expected_memory": ["thẳng", "ngắn", "ý chính trước", "dễ mất kiên nhẫn"],
+      "forbidden_memory": ["trả lời dài dòng"],
+      "judge_notes": "Should recall communication preference."
+    },
+    {
+      "id": "everyday_006",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui đang dùng laptop yếu, mở nhiều model local là máy lag.",
+        "Nếu có lựa chọn thì tui ưu tiên giải pháp nhẹ, chạy được trên máy dev hiện tại."
+      ],
+      "probe_message": "Nếu chọn giữa giải pháp memory nặng và nhẹ thì ông nhớ tui ưu tiên gì không?",
+      "expected_memory": ["laptop yếu", "máy lag", "giải pháp nhẹ", "máy dev hiện tại"],
+      "forbidden_memory": ["ưu tiên giải pháp nặng"],
+      "judge_notes": "Should not give generic architecture answer only."
+    },
+    {
+      "id": "everyday_007",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui hay bị phân tâm bởi điện thoại khi học.",
+        "Cách hiệu quả nhất với tui là để điện thoại xa bàn, chứ tắt thông báo thôi chưa đủ."
+      ],
+      "probe_message": "Mai học tiếp mà sợ phân tâm thì nhắc tui cách nào từng hiệu quả?",
+      "expected_memory": ["điện thoại", "để điện thoại xa bàn", "tắt thông báo chưa đủ"],
+      "forbidden_memory": ["chỉ tắt thông báo"],
+      "judge_notes": "Should recall the specific strategy."
+    },
+    {
+      "id": "everyday_008",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui không thích bị khen kiểu sáo rỗng.",
+        "Nếu tui làm tốt thì chỉ cần nói cụ thể chỗ nào tốt là được."
+      ],
+      "probe_message": "Nếu muốn động viên tui thì đừng làm kiểu gì?",
+      "expected_memory": ["không thích bị khen sáo rỗng", "nói cụ thể chỗ nào tốt"],
+      "forbidden_memory": ["khen sáo rỗng"],
+      "judge_notes": "Should recall praise preference."
+    },
+    {
+      "id": "everyday_009",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thường uống cà phê đen không đường.",
+        "Trà sữa thì tui chỉ uống khi đi với bạn, bình thường không thèm."
+      ],
+      "probe_message": "Nếu mua nước cho tui lúc đang code thì chọn gì hợp gu hơn?",
+      "expected_memory": ["cà phê đen không đường", "lúc đang code"],
+      "forbidden_memory": ["trà sữa là lựa chọn chính"],
+      "judge_notes": "Should choose black coffee over milk tea."
+    },
+    {
+      "id": "everyday_010",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui sợ nhất demo bị đứng im không biết hệ thống đang làm gì.",
+        "Vì vậy tui thích UI có trace hoặc log để còn giải thích."
+      ],
+      "probe_message": "Trong demo app này, chi tiết nào giúp tui đỡ sợ bị hỏi bí?",
+      "expected_memory": ["demo bị đứng im", "trace", "log", "giải thích"],
+      "forbidden_memory": ["ẩn hết trace"],
+      "judge_notes": "Should connect to visible trace/log value."
+    },
+    {
+      "id": "everyday_011",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui không thích app nào ép đăng nhập sớm.",
+        "Nếu chỉ test MVP thì tui muốn mở ra dùng ngay trước đã."
+      ],
+      "probe_message": "Với bản MVP để demo, ông nhớ tui ghét kiểu onboarding nào không?",
+      "expected_memory": ["ép đăng nhập sớm", "mở ra dùng ngay"],
+      "forbidden_memory": ["bắt đăng nhập ngay"],
+      "judge_notes": "Should recall onboarding preference."
+    },
+    {
+      "id": "everyday_012",
+      "category": "everyday_memory",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui hay ghi chú bằng tiếng Việt không dấu khi gõ nhanh.",
+        "Nhưng khi làm báo cáo thì tui cần tiếng Việt có dấu, chỉnh chu."
+      ],
+      "probe_message": "Nếu tui gửi note không dấu trong lúc chat thì ông nên hiểu sao?",
+      "expected_memory": ["ghi chú bằng tiếng Việt không dấu", "gõ nhanh", "báo cáo cần có dấu"],
+      "forbidden_memory": ["không hiểu tiếng Việt không dấu"],
+      "judge_notes": "Should treat no-accent Vietnamese as normal chat behavior."
+    },
+    {
+      "id": "emotional_001",
+      "category": "emotional_continuity",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Hôm nay tui hơi nản vì cứ test memory là lúc được lúc không.",
+        "Cảm giác khó chịu nhất là không biết lỗi nằm ở Graphiti, prompt hay chính cách tui test."
+      ],
+      "probe_message": "Vụ memory làm tui nản ở điểm nào nhỉ?",
+      "expected_memory": ["test memory lúc được lúc không", "không biết lỗi nằm ở Graphiti", "prompt", "cách tui test"],
+      "forbidden_memory": ["nản vì chuyện không liên quan"],
+      "judge_notes": "Should recall the uncertainty source, not just say user is stressed."
+    },
+    {
+      "id": "emotional_002",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui hơi sợ đem demo cho thầy vì chỉ test được vài câu đơn giản.",
+        "Nếu bị hỏi lệch khỏi mấy câu đó chắc app fail ngay."
+      ],
+      "probe_message": "Nỗi lo demo của tui là gì?",
+      "expected_memory": ["demo cho thầy", "vài câu đơn giản", "hỏi lệch", "app fail"],
+      "forbidden_memory": ["sợ vì không có slide"],
+      "judge_notes": "Should recall the demo fear specifically."
+    },
+    {
+      "id": "emotional_003",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui bị mất niềm tin khi hai con agent cứ nói ngược nhau.",
+        "Cái tui cần là bằng chứng chạy được, không phải thêm lời khuyên kiến trúc."
+      ],
+      "probe_message": "Lúc tui bực với agent, thật ra tui cần điều gì hơn?",
+      "expected_memory": ["mất niềm tin", "agent nói ngược nhau", "bằng chứng chạy được", "không phải lời khuyên kiến trúc"],
+      "forbidden_memory": ["muốn thêm brainstorming"],
+      "judge_notes": "Should remember user's trust concern."
+    },
+    {
+      "id": "emotional_004",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui vui nhất khi thấy test pass thật, dù chỉ là một phần nhỏ.",
+        "Cảm giác đó làm tui có động lực làm tiếp hơn là đọc giải thích dài."
+      ],
+      "probe_message": "Thứ gì làm tui có động lực làm tiếp hơn?",
+      "expected_memory": ["test pass thật", "một phần nhỏ", "động lực", "hơn là đọc giải thích dài"],
+      "forbidden_memory": ["đọc giải thích dài là chính"],
+      "judge_notes": "Should recall motivation trigger."
+    },
+    {
+      "id": "emotional_005",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thường im một lúc khi đang rối, không phải vì bỏ cuộc.",
+        "Lúc đó tui cần ai đó tóm tắt lại điểm đang kẹt."
+      ],
+      "probe_message": "Nếu tui im vì rối thì ông nên làm gì?",
+      "expected_memory": ["im một lúc khi đang rối", "không phải bỏ cuộc", "tóm tắt điểm đang kẹt"],
+      "forbidden_memory": ["coi như bỏ cuộc"],
+      "judge_notes": "Should use remembered support preference."
+    },
+    {
+      "id": "emotional_006",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui dễ khó chịu khi câu trả lời nghe chắc chắn quá nhưng không có bằng chứng.",
+        "Nếu không chắc thì cứ nói không chắc."
+      ],
+      "probe_message": "Khi ông chưa chắc về một nhận định thì nên nói sao với tui?",
+      "expected_memory": ["nghe chắc chắn quá", "không có bằng chứng", "nói không chắc"],
+      "forbidden_memory": ["giả vờ chắc chắn"],
+      "judge_notes": "Should recall uncertainty preference."
+    },
+    {
+      "id": "emotional_007",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Có lúc tui tự nghi ngờ là mình đang build thứ quá phức tạp.",
+        "Nhưng tui vẫn muốn giữ hướng memory assistant vì nó là điểm khác biệt của đề tài."
+      ],
+      "probe_message": "Tui đang tự nghi ngờ chuyện gì, nhưng vẫn muốn giữ điều gì?",
+      "expected_memory": ["build thứ quá phức tạp", "giữ hướng memory assistant", "điểm khác biệt của đề tài"],
+      "forbidden_memory": ["muốn bỏ memory assistant"],
+      "judge_notes": "Should capture the tension, not flip the meaning."
+    },
+    {
+      "id": "emotional_008",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui ghét cảm giác bị ép chọn kiến trúc khi chưa có dữ liệu.",
+        "Với tui, eval là cách lấy lại bình tĩnh."
+      ],
+      "probe_message": "Tại sao tui muốn làm eval trước khi đổi kiến trúc?",
+      "expected_memory": ["bị ép chọn kiến trúc", "chưa có dữ liệu", "eval", "lấy lại bình tĩnh"],
+      "forbidden_memory": ["đổi kiến trúc ngay"],
+      "judge_notes": "Should recall eval as confidence mechanism."
+    },
+    {
+      "id": "emotional_009",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui đang hơi áp lực vì báo cáo yêu cầu vừa kỹ thuật vừa startup.",
+        "Phần kỹ thuật thì còn làm được, phần chứng minh giá trị sản phẩm mới khó."
+      ],
+      "probe_message": "Trong báo cáo, phần nào làm tui áp lực hơn?",
+      "expected_memory": ["báo cáo", "kỹ thuật", "startup", "chứng minh giá trị sản phẩm"],
+      "forbidden_memory": ["phần kỹ thuật là khó nhất"],
+      "judge_notes": "Should identify product value proof as harder."
+    },
+    {
+      "id": "emotional_010",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thấy nhẹ đầu hơn khi mọi thứ được chia thành checklist nhỏ.",
+        "Một danh sách dài toàn khái niệm làm tui càng rối."
+      ],
+      "probe_message": "Muốn giúp tui bớt rối thì trình bày kiểu gì hợp hơn?",
+      "expected_memory": ["checklist nhỏ", "danh sách dài toàn khái niệm", "càng rối"],
+      "forbidden_memory": ["danh sách dài khái niệm"],
+      "judge_notes": "Should recall format preference tied to stress."
+    },
+    {
+      "id": "emotional_011",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui hơi ngại khi phải nói app là người bạn, vì sợ nghe marketing quá.",
+        "Nhưng đúng ý tui là nó phải nhớ chuyện đời thường chứ không chỉ task."
+      ],
+      "probe_message": "Khi tui nói app là người bạn, ý tui không phải gì và thật ra là gì?",
+      "expected_memory": ["sợ nghe marketing", "nhớ chuyện đời thường", "không chỉ task"],
+      "forbidden_memory": ["chỉ quản lý task"],
+      "judge_notes": "Should explain companion intent without marketing spin."
+    },
+    {
+      "id": "emotional_012",
+      "category": "emotional_continuity",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui không muốn bị an ủi quá đà.",
+        "Khi tui căng, cứ công nhận vấn đề rồi đưa bước tiếp theo cụ thể là được."
+      ],
+      "probe_message": "Nếu tui đang căng thì ông đừng phản hồi kiểu gì, nên làm gì?",
+      "expected_memory": ["không muốn bị an ủi quá đà", "công nhận vấn đề", "bước tiếp theo cụ thể"],
+      "forbidden_memory": ["an ủi quá đà"],
+      "judge_notes": "Should recall emotional response preference."
+    },
+    {
+      "id": "social_001",
+      "category": "social_context",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Anh Tú là người hay chơi game với tui buổi tối.",
+        "Nếu tui nhắc anh Tú thì thường là context chơi game, không phải thầy hướng dẫn."
+      ],
+      "probe_message": "Anh Tú trong mấy câu tui hay nhắc là ai?",
+      "expected_memory": ["người hay chơi game", "buổi tối", "không phải thầy hướng dẫn"],
+      "forbidden_memory": ["thầy hướng dẫn"],
+      "judge_notes": "Should preserve identity distinction."
+    },
+    {
+      "id": "social_002",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nam là bạn cùng lớp của tui, hay nhắc tui deadline.",
+        "Nam nói chuyện hơi cọc nhưng thường có ý tốt."
+      ],
+      "probe_message": "Nếu Nam nhắc deadline hơi gắt thì tui nên hiểu sao?",
+      "expected_memory": ["bạn cùng lớp", "nhắc deadline", "hơi cọc", "có ý tốt"],
+      "forbidden_memory": ["Nam ghét tui"],
+      "judge_notes": "Should use social nuance."
+    },
+    {
+      "id": "social_003",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Mẹ tui không rành công nghệ, nhưng rất hay hỏi tui đã ăn chưa.",
+        "Nếu tui nói mẹ nhắn thì thường là chuyện sinh hoạt, không phải chuyện code."
+      ],
+      "probe_message": "Mẹ tui thường quan tâm chuyện gì?",
+      "expected_memory": ["không rành công nghệ", "đã ăn chưa", "chuyện sinh hoạt"],
+      "forbidden_memory": ["chuyện code"],
+      "judge_notes": "Should recall everyday family context."
+    },
+    {
+      "id": "social_004",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Bạn Huy hay góp ý UI cho tui.",
+        "Huy thích giao diện gọn, không màu mè, nhưng đôi khi hơi khó tính."
+      ],
+      "probe_message": "Nếu Huy chê UI thì khả năng cao là chê theo hướng nào?",
+      "expected_memory": ["góp ý UI", "giao diện gọn", "không màu mè", "hơi khó tính"],
+      "forbidden_memory": ["muốn UI màu mè"],
+      "judge_notes": "Should recall Huy's UI taste."
+    },
+    {
+      "id": "social_005",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Thầy hướng dẫn của tui quan tâm nhất là demo có chứng minh được giá trị không.",
+        "Thầy không thích nghe quá nhiều thuật ngữ nếu không có kết quả chạy."
+      ],
+      "probe_message": "Khi chuẩn bị nói với thầy, tui nên né kiểu trình bày nào?",
+      "expected_memory": ["demo chứng minh giá trị", "không thích quá nhiều thuật ngữ", "kết quả chạy"],
+      "forbidden_memory": ["chỉ nói thuật ngữ"],
+      "judge_notes": "Should recall supervisor's evaluation style."
+    },
+    {
+      "id": "social_006",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Lan là người hay rủ tui đi cà phê để đổi gió.",
+        "Lan không liên quan tới project, chỉ là bạn ngoài đời."
+      ],
+      "probe_message": "Lan là ai trong context của tui?",
+      "expected_memory": ["rủ đi cà phê", "đổi gió", "bạn ngoài đời", "không liên quan project"],
+      "forbidden_memory": ["người trong project"],
+      "judge_notes": "Should not turn every person into project context."
+    },
+    {
+      "id": "social_007",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Ba tui thường hỏi mọi thứ có chạy ổn không hơn là hỏi code viết thế nào.",
+        "Ổng chỉ cần thấy app chạy được là yên tâm hơn."
+      ],
+      "probe_message": "Nếu kể với ba tui về project thì nên nói điểm gì trước?",
+      "expected_memory": ["có chạy ổn không", "app chạy được", "yên tâm"],
+      "forbidden_memory": ["chi tiết code trước"],
+      "judge_notes": "Should tailor to father's concern."
+    },
+    {
+      "id": "social_008",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Minh là người hay mượn tiền lặt vặt của tui.",
+        "Minh không phải Nam; hai người này dễ bị tui gõ lẫn nếu nói nhanh."
+      ],
+      "probe_message": "Minh với Nam có phải cùng một người không?",
+      "expected_memory": ["Minh", "mượn tiền lặt vặt", "không phải Nam"],
+      "forbidden_memory": ["cùng một người"],
+      "judge_notes": "Should distinguish people."
+    },
+    {
+      "id": "social_009",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Vy hay đọc báo cáo giúp tui, đặc biệt là lỗi diễn đạt.",
+        "Vy không rành backend nên đừng nhờ Vy review code sâu."
+      ],
+      "probe_message": "Nếu cần nhờ Vy giúp thì nên nhờ phần nào?",
+      "expected_memory": ["đọc báo cáo", "lỗi diễn đạt", "không rành backend", "không review code sâu"],
+      "forbidden_memory": ["review backend sâu"],
+      "judge_notes": "Should recall Vy's useful role."
+    },
+    {
+      "id": "social_010",
+      "category": "social_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nhóm bạn game của tui hay online sau 9 giờ tối.",
+        "Trước 9 giờ thì thường chưa đủ người."
+      ],
+      "probe_message": "Nếu muốn rủ nhóm game thì nên rủ tầm nào?",
+      "expected_memory": ["sau 9 giờ tối", "trước 9 giờ chưa đủ người"],
+      "forbidden_memory": ["trước 9 giờ là tốt nhất"],
+      "judge_notes": "Should recall group schedule."
+    },
+    {
+      "id": "goals_001",
+      "category": "personal_goals",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Mục tiêu gần nhất của tui là có một demo memory assistant chạy ổn trước buổi báo cáo thử.",
+        "Chưa cần kiến trúc hoàn hảo, chỉ cần không fail những câu hỏi lệch nhẹ."
+      ],
+      "probe_message": "Mục tiêu gần nhất của project này là gì?",
+      "expected_memory": ["demo memory assistant chạy ổn", "báo cáo thử", "không cần kiến trúc hoàn hảo", "không fail câu hỏi lệch nhẹ"],
+      "forbidden_memory": ["kiến trúc hoàn hảo là ưu tiên chính"],
+      "judge_notes": "Should recall current goal."
+    },
+    {
+      "id": "goals_002",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui muốn khóa luận này chứng minh được tính ứng dụng, không chỉ là nghiên cứu kỹ thuật.",
+        "Phần khởi nghiệp trong báo cáo cần có case demo thuyết phục."
+      ],
+      "probe_message": "Khóa luận này cần chứng minh điều gì ngoài kỹ thuật?",
+      "expected_memory": ["tính ứng dụng", "khởi nghiệp", "case demo thuyết phục"],
+      "forbidden_memory": ["chỉ nghiên cứu kỹ thuật"],
+      "judge_notes": "Should recall thesis/business goal."
+    },
+    {
+      "id": "goals_003",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tuần này tui muốn ưu tiên eval trước, rồi mới quyết định đổi memory backend hay không.",
+        "Không có eval thì mọi tranh luận kiến trúc đều làm tui rối thêm."
+      ],
+      "probe_message": "Thứ tự ưu tiên tuần này của tui là gì?",
+      "expected_memory": ["ưu tiên eval trước", "quyết định đổi memory backend sau", "tranh luận kiến trúc làm rối"],
+      "forbidden_memory": ["đổi backend trước eval"],
+      "judge_notes": "Should recall ordered priority."
+    },
+    {
+      "id": "goals_004",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui muốn app này về lâu dài giống một người bạn nhớ được chuyện mình từng nói.",
+        "Nó không nên chỉ là todo app có chat interface."
+      ],
+      "probe_message": "Tầm nhìn dài hạn của app này là gì?",
+      "expected_memory": ["người bạn nhớ được chuyện từng nói", "không chỉ là todo app"],
+      "forbidden_memory": ["todo app có chat interface"],
+      "judge_notes": "Should recall product vision."
+    },
+    {
+      "id": "goals_005",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui đang cố học cách đánh giá hệ thống bằng bằng chứng thay vì cảm giác.",
+        "Eval suite là bước tập thói quen đó."
+      ],
+      "probe_message": "Tui đang muốn rèn thói quen kỹ thuật nào?",
+      "expected_memory": ["đánh giá hệ thống bằng bằng chứng", "thay vì cảm giác", "eval suite"],
+      "forbidden_memory": ["quyết định bằng cảm giác"],
+      "judge_notes": "Should recall engineering habit goal."
+    },
+    {
+      "id": "goals_006",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui muốn phần demo có thể cho thấy app nhớ context sau nhiều lượt chat.",
+        "Một câu hỏi một câu trả lời thì không đủ khác biệt."
+      ],
+      "probe_message": "Demo cần thể hiện điểm gì để khác chatbot thường?",
+      "expected_memory": ["nhớ context sau nhiều lượt chat", "một câu hỏi một câu trả lời không đủ khác biệt"],
+      "forbidden_memory": ["chỉ hỏi đáp một lượt"],
+      "judge_notes": "Should recall demo differentiation."
+    },
+    {
+      "id": "goals_007",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui muốn tránh build thêm feature mới trước khi biết memory hiện tại fail ở đâu.",
+        "Fix đúng lỗi retrieval quan trọng hơn thêm UI đẹp."
+      ],
+      "probe_message": "Trước khi thêm feature mới, tui muốn biết gì?",
+      "expected_memory": ["memory hiện tại fail ở đâu", "fix lỗi retrieval", "quan trọng hơn UI đẹp"],
+      "forbidden_memory": ["ưu tiên thêm UI đẹp"],
+      "judge_notes": "Should recall focus on retrieval failures."
+    },
+    {
+      "id": "goals_008",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui đang muốn có report eval đọc được như bảng kết quả demo.",
+        "Không chỉ log raw JSON khó nhìn."
+      ],
+      "probe_message": "Report eval nên trông như thế nào mới hữu ích với tui?",
+      "expected_memory": ["bảng kết quả demo", "không chỉ raw JSON", "đọc được"],
+      "forbidden_memory": ["chỉ raw JSON"],
+      "judge_notes": "Should recall report preference."
+    },
+    {
+      "id": "goals_009",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nếu eval fail nhiều, tui muốn nhìn category nào fail trước.",
+        "Nhìn một con số tổng pass rate thôi chưa đủ để sửa."
+      ],
+      "probe_message": "Khi eval fail, thông tin nào giúp tui sửa tốt hơn?",
+      "expected_memory": ["category nào fail", "pass rate tổng chưa đủ"],
+      "forbidden_memory": ["chỉ cần tổng pass rate"],
+      "judge_notes": "Should recall category-level diagnosis need."
+    },
+    {
+      "id": "goals_010",
+      "category": "personal_goals",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui muốn giữ code thay đổi nhỏ và dễ rollback.",
+        "Nếu eval chỉ là công cụ phụ thì đừng làm nó xâm lấn app chính."
+      ],
+      "probe_message": "Khi thêm eval, tui muốn giữ nguyên tắc gì với code app chính?",
+      "expected_memory": ["thay đổi nhỏ", "dễ rollback", "đừng xâm lấn app chính"],
+      "forbidden_memory": ["sửa sâu app chính"],
+      "judge_notes": "Should recall implementation constraint."
+    },
+    {
+      "id": "update_001",
+      "category": "correction_update",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nhớ là tui định demo vào thứ sáu tuần này.",
+        "Đổi lại nha, lịch demo thử không phải thứ sáu nữa, chuyển sang thứ năm."
+      ],
+      "probe_message": "Demo thử của tui là thứ mấy?",
+      "expected_memory": ["chuyển sang thứ năm", "không phải thứ sáu"],
+      "forbidden_memory": ["thứ sáu"],
+      "judge_notes": "Should prefer the update over the old fact."
+    },
+    {
+      "id": "update_002",
+      "category": "correction_update",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui từng nghĩ nên bỏ Graphiti luôn.",
+        "Cập nhật lại: tui chưa quyết định bỏ Graphiti, tui muốn eval trước rồi tính."
+      ],
+      "probe_message": "Tui đã quyết định bỏ Graphiti chưa?",
+      "expected_memory": ["chưa quyết định bỏ Graphiti", "eval trước rồi tính"],
+      "forbidden_memory": ["đã quyết định bỏ Graphiti"],
+      "judge_notes": "Should not use outdated stance."
+    },
+    {
+      "id": "update_003",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Ban đầu tui gọi sản phẩm là trợ lý cá nhân.",
+        "Sau nghĩ lại, tui muốn gọi nó là người bạn có trí nhớ hơn là trợ lý cá nhân."
+      ],
+      "probe_message": "Tên định vị sản phẩm hiện tại nghiêng về gì?",
+      "expected_memory": ["người bạn có trí nhớ", "hơn là trợ lý cá nhân"],
+      "forbidden_memory": ["chỉ là trợ lý cá nhân"],
+      "judge_notes": "Should reflect updated positioning."
+    },
+    {
+      "id": "update_004",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui bảo là muốn 40 eval cases.",
+        "Sửa lại, tui muốn 70 cases vì demo dễ lệch hơn tui tưởng."
+      ],
+      "probe_message": "Eval v1 nên có bao nhiêu case theo ý tui hiện tại?",
+      "expected_memory": ["70 cases", "demo dễ lệch"],
+      "forbidden_memory": ["40 eval cases"],
+      "judge_notes": "Should use latest case count."
+    },
+    {
+      "id": "update_005",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui nói muốn deterministic judge trước.",
+        "Không, đổi lại dùng LLM judge luôn cho giống demo tự nhiên hơn."
+      ],
+      "probe_message": "Eval này hiện tại nên chấm bằng gì?",
+      "expected_memory": ["LLM judge", "giống demo tự nhiên"],
+      "forbidden_memory": ["deterministic judge trước"],
+      "judge_notes": "Should use updated judge mode."
+    },
+    {
+      "id": "update_006",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui từng tính thêm endpoint eval helper.",
+        "Nhưng giờ chốt không đổi API, chỉ gọi /api/chat thôi."
+      ],
+      "probe_message": "Runner eval có nên thêm endpoint riêng không?",
+      "expected_memory": ["không đổi API", "chỉ gọi /api/chat"],
+      "forbidden_memory": ["thêm endpoint eval helper"],
+      "judge_notes": "Should recall API scope."
+    },
+    {
+      "id": "update_007",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Ban đầu tui chỉ nghĩ test lịch, nợ, sở thích.",
+        "Sau đó tui nói rõ là như vậy quá if else, tui muốn memory đời thường tự nhiên hơn."
+      ],
+      "probe_message": "Tui không muốn eval chỉ xoay quanh loại memory nào?",
+      "expected_memory": ["lịch, nợ, sở thích", "quá if else", "memory đời thường tự nhiên"],
+      "forbidden_memory": ["chỉ test lịch nợ sở thích"],
+      "judge_notes": "Should recall dislike of over-specified cases."
+    },
+    {
+      "id": "update_008",
+      "category": "correction_update",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui nói output report để trong evals/reports là được.",
+        "Nhớ là report đó không nên commit, chỉ để xem sau khi chạy."
+      ],
+      "probe_message": "Report eval sinh ra có nên commit không?",
+      "expected_memory": ["không nên commit", "chỉ để xem sau khi chạy", "evals/reports"],
+      "forbidden_memory": ["nên commit report"],
+      "judge_notes": "Should recall artifact handling preference."
+    },
+    {
+      "id": "no_memory_001",
+      "category": "dont_overuse_memory",
+      "critical": true,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Giải thích ngắn gọn HTTP status 404 là gì.",
+      "expected_memory": [],
+      "forbidden_memory": ["sở thích cà phê", "Graphiti", "demo", "người bạn"],
+      "judge_notes": "General knowledge question should not drag personal memory into the answer."
+    },
+    {
+      "id": "no_memory_002",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Viết giúp tui một câu commit message ngắn cho việc thêm eval runner.",
+      "expected_memory": [],
+      "forbidden_memory": ["mẹ tui", "Lan", "Anh Tú", "cà phê đen"],
+      "judge_notes": "Can answer task directly without unrelated personal context."
+    },
+    {
+      "id": "no_memory_003",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Cho tui ví dụ JSON object có hai field name và age.",
+      "expected_memory": [],
+      "forbidden_memory": ["memory assistant", "demo", "khóa luận"],
+      "judge_notes": "Should not inject old project context."
+    },
+    {
+      "id": "no_memory_004",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Tóm tắt sự khác nhau giữa list và tuple trong Python.",
+      "expected_memory": [],
+      "forbidden_memory": ["điện thoại", "thức khuya", "quán cà phê"],
+      "judge_notes": "Technical explanation should not use personal memory unless asked."
+    },
+    {
+      "id": "no_memory_005",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Dịch câu 'the system is running locally' sang tiếng Việt.",
+      "expected_memory": [],
+      "forbidden_memory": ["thầy hướng dẫn", "báo cáo", "startup"],
+      "judge_notes": "Translation task needs no memory."
+    },
+    {
+      "id": "no_memory_006",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Nếu tui hỏi một câu không liên quan gì tới chuyện cũ thì ông có cần lôi memory ra không?",
+      "expected_memory": [],
+      "forbidden_memory": ["chi tiết đời tư cụ thể"],
+      "judge_notes": "Should answer principle without exposing unrelated stored facts."
+    },
+    {
+      "id": "no_memory_007",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Tạo một tên biến Python cho danh sách kết quả eval.",
+      "expected_memory": [],
+      "forbidden_memory": ["Nam", "Minh", "Vy", "Lan"],
+      "judge_notes": "Simple generation should avoid unrelated names."
+    },
+    {
+      "id": "no_memory_008",
+      "category": "dont_overuse_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [],
+      "probe_message": "Nói một câu ngắn để bắt đầu buổi demo.",
+      "expected_memory": [],
+      "forbidden_memory": ["cà phê", "rau mùi", "mẹ tui"],
+      "judge_notes": "May mention demo generically, but not unrelated personal facts."
+    },
+    {
+      "id": "guardrail_001",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Minh nợ tui 60k tiền ăn tối.",
+        "Tui nợ Nam 30k tiền in tài liệu."
+      ],
+      "probe_message": "Ai đang nợ tui tiền?",
+      "expected_memory": ["Minh nợ tui 60k"],
+      "forbidden_memory": ["tui nợ Nam", "Nam nợ tui"],
+      "judge_notes": "Debt direction must be correct."
+    },
+    {
+      "id": "guardrail_002",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [],
+      "probe_message": "Tui đang nợ ai?",
+      "expected_memory": ["tui nợ Nam 30k"],
+      "forbidden_memory": ["Minh nợ tui", "tui nợ Minh"],
+      "judge_notes": "Debt direction must be correct in the opposite query."
+    },
+    {
+      "id": "guardrail_003",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Chiều mai lúc 3h tui có lịch chơi game với anh Tú.",
+        "Sáng mai lúc 8h tui phải nộp bản nháp báo cáo."
+      ],
+      "probe_message": "Mai tui có những việc gì?",
+      "expected_memory": ["chơi game với anh Tú", "3h", "nộp bản nháp báo cáo", "8h"],
+      "forbidden_memory": ["hôm nay"],
+      "judge_notes": "Should retrieve both tomorrow events if stored."
+    },
+    {
+      "id": "guardrail_004",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Hủy lịch chơi game với anh Tú chiều mai nha, không chơi nữa."
+      ],
+      "probe_message": "Mai tui còn lịch chơi game với anh Tú không?",
+      "expected_memory": ["hủy lịch chơi game", "không chơi nữa"],
+      "forbidden_memory": ["còn lịch chơi game"],
+      "judge_notes": "Should honor cancellation."
+    },
+    {
+      "id": "guardrail_005",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Deadline gửi slide là thứ tư tuần này.",
+        "Deadline gửi bản báo cáo đầy đủ là thứ sáu tuần này."
+      ],
+      "probe_message": "Slide với báo cáo đầy đủ deadline khác nhau sao?",
+      "expected_memory": ["slide là thứ tư", "báo cáo đầy đủ là thứ sáu"],
+      "forbidden_memory": ["cùng một deadline"],
+      "judge_notes": "Should distinguish related deadlines."
+    },
+    {
+      "id": "guardrail_006",
+      "category": "hard_guardrails",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thích quán yên tĩnh để làm việc, nhưng không thích quán quá tối.",
+        "Ánh sáng tự nhiên là điểm cộng lớn với tui."
+      ],
+      "probe_message": "Gợi ý quán làm việc cho tui thì nhớ tránh kiểu nào?",
+      "expected_memory": ["không thích quán quá tối", "ánh sáng tự nhiên", "yên tĩnh"],
+      "forbidden_memory": ["quán quá tối"],
+      "judge_notes": "Should combine preference and negative preference."
+    },
+    {
+      "id": "noisy_001",
+      "category": "noisy_long_context",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Hôm qua tui nói chuyện với Huy về UI.",
+        "Sáng nay tui đọc lại báo cáo chương 2.",
+        "Nhớ chi tiết quan trọng: lỗi demo tệ nhất với tui là retrieved_facts trống dù câu hỏi rõ ràng cần memory.",
+        "Tối nay chắc tui chỉ sửa README nếu còn sức."
+      ],
+      "probe_message": "Trong mớ chuyện lộn xộn đó, lỗi demo nào tệ nhất với tui?",
+      "expected_memory": ["retrieved_facts trống", "câu hỏi rõ ràng cần memory"],
+      "forbidden_memory": ["sửa README là lỗi tệ nhất", "Huy chê UI là lỗi tệ nhất"],
+      "judge_notes": "Should pick the relevant memory from noisy seeds."
+    },
+    {
+      "id": "noisy_002",
+      "category": "noisy_long_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui vừa ăn tối xong.",
+        "Mai có thể trời mưa.",
+        "Điểm tui muốn nhớ: nếu app không chắc, nó nên nói không tìm thấy memory thay vì đoán.",
+        "À quên, ly cà phê hôm nay hơi đắng."
+      ],
+      "probe_message": "Khi không tìm thấy memory thì app nên làm gì theo ý tui?",
+      "expected_memory": ["nói không tìm thấy memory", "thay vì đoán"],
+      "forbidden_memory": ["đoán đại"],
+      "judge_notes": "Should isolate the product preference from filler."
+    },
+    {
+      "id": "noisy_003",
+      "category": "noisy_long_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui đang nghe nhạc nhẹ.",
+        "Vy bảo đoạn mở đầu báo cáo hơi dài.",
+        "Fact cần nhớ: tui muốn demo bắt đầu bằng câu hỏi đời thường, rồi mới qua câu hỏi kỹ thuật.",
+        "Nam vừa nhắn hỏi deadline."
+      ],
+      "probe_message": "Thứ tự câu hỏi trong demo nên như thế nào?",
+      "expected_memory": ["bắt đầu bằng câu hỏi đời thường", "mới qua câu hỏi kỹ thuật"],
+      "forbidden_memory": ["bắt đầu bằng câu hỏi kỹ thuật"],
+      "judge_notes": "Should retrieve demo sequence preference."
+    },
+    {
+      "id": "noisy_004",
+      "category": "noisy_long_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui vừa đổi font trong slide.",
+        "Mẹ hỏi tui đã ăn chưa.",
+        "Điều quan trọng là tui muốn app nhớ cả lý do đằng sau quyết định, không chỉ nhớ kết luận.",
+        "Anh Tú rủ game nhưng tui chưa trả lời."
+      ],
+      "probe_message": "Tui muốn app nhớ kiểu gì về quyết định của tui?",
+      "expected_memory": ["nhớ cả lý do đằng sau quyết định", "không chỉ nhớ kết luận"],
+      "forbidden_memory": ["chỉ nhớ kết luận"],
+      "judge_notes": "Should recall meta-memory preference."
+    }
+  ]
+}

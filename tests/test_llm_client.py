@@ -35,12 +35,17 @@ class FakeMemory:
         self,
         edges: list[FakeEdge] | None = None,
         edges_by_query: dict[str, list[FakeEdge]] | None = None,
+        companion_by_query: dict[str, list[RetrievedFact]] | None = None,
+        pinned_facts: list[RetrievedFact] | None = None,
         enable_manual: bool = True,
     ):
         self.edges = edges or []
         self.edges_by_query = edges_by_query or {}
+        self.companion_by_query = companion_by_query or {}
+        self.pinned_facts = pinned_facts or []
         self.enable_manual = enable_manual
         self.searches: list[str] = []
+        self.companion_searches: list[str] = []
         self.user_messages: list[str] = []
         self.memory_facts: list[str] = []
         self.manual_facts: list[tuple[str, datetime | None]] = []
@@ -68,6 +73,15 @@ class FakeMemory:
 
     async def add_memory_fact(self, memory_text: str) -> None:
         self.memory_facts.append(memory_text)
+
+    async def pinned_memories(self) -> list[RetrievedFact]:
+        return self.pinned_facts
+
+    async def search_companion_memories(
+        self, query: str
+    ) -> list[RetrievedFact]:
+        self.companion_searches.append(query)
+        return self.companion_by_query.get(query, [])
 
     async def add_manual_fact(
         self, fact: str, valid_at: datetime | None
@@ -246,6 +260,87 @@ def test_search_memory_uses_manual_facts_for_dated_recall() -> None:
     assert [fact.fact for fact in result.retrieved_facts] == [
         "Chieu 2 gio ngay 2026-06-07, toi di choi game voi anh Tu."
     ]
+
+
+def test_pinned_memories_are_injected_into_first_model_prompt() -> None:
+    client, requests = _client_for_responses(
+        [_gemini_text("Ok ông, tôi sẽ trả lời ngắn.")]
+    )
+    memory = FakeMemory(
+        pinned_facts=[
+            RetrievedFact(fact="Người dùng muốn được gọi là ông."),
+            RetrievedFact(fact="Người dùng muốn câu trả lời ngắn, ý chính trước."),
+        ]
+    )
+
+    result = asyncio.run(client.reply("nhắc tôi đang hỏi gì", memory))
+
+    first_prompt = requests[0]["contents"][0]["parts"][0]["text"]
+    assert "Always relevant user memory:" in first_prompt
+    assert "Người dùng muốn được gọi là ông." in first_prompt
+    assert "User message:\nnhắc tôi đang hỏi gì" in first_prompt
+    assert result.reply == "Ok ông, tôi sẽ trả lời ngắn."
+
+
+def test_search_memory_merges_graphiti_and_companion_results() -> None:
+    client, _ = _client_for_responses(
+        [
+            _gemini_call("search_memory", {"query": "ca phe"}),
+            _gemini_text("Bạn thích cà phê đen và quán yên tĩnh."),
+        ]
+    )
+    memory = FakeMemory(
+        edges=[FakeEdge(uuid="edge-1", fact="Người dùng thích cà phê đen.")],
+        companion_by_query={
+            "ca phe": [RetrievedFact(fact="Người dùng thích quán cafe yên tĩnh.")]
+        },
+    )
+
+    result = asyncio.run(client.reply("tôi thích kiểu cafe nào?", memory))
+
+    assert [fact.fact for fact in result.retrieved_facts] == [
+        "Người dùng thích cà phê đen.",
+        "Người dùng thích quán cafe yên tĩnh.",
+    ]
+
+
+def test_search_memory_broad_fallback_finds_stored_preference() -> None:
+    client, _ = _client_for_responses(
+        [
+            _gemini_call("search_memory", {"query": "phở"}),
+            _gemini_text("Nhớ dặn không rau mùi."),
+        ]
+    )
+    memory = FakeMemory(
+        companion_by_query={
+            "điều user không thích": [
+                RetrievedFact(fact="Người dùng không ăn rau mùi.")
+            ]
+        }
+    )
+
+    result = asyncio.run(client.reply("tui ăn phở thì cần nhớ gì?", memory))
+
+    assert "điều user không thích" in memory.companion_searches
+    assert [fact.fact for fact in result.retrieved_facts] == [
+        "Người dùng không ăn rau mùi."
+    ]
+
+
+def test_non_pinned_memories_are_not_injected_without_search() -> None:
+    client, requests = _client_for_responses([_gemini_text("2 + 2 = 4.")])
+    memory = FakeMemory(
+        companion_by_query={
+            "anything": [RetrievedFact(fact="Người dùng thích cà phê đen.")]
+        }
+    )
+
+    result = asyncio.run(client.reply("2 + 2 bằng mấy?", memory))
+
+    first_prompt = requests[0]["contents"][0]["parts"][0]["text"]
+    assert "Always relevant user memory:" not in first_prompt
+    assert "Người dùng thích cà phê đen." not in first_prompt
+    assert result.retrieved_facts == []
 
 
 def test_cancel_matching_facts_invalidates_active_dated_edges() -> None:

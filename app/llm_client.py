@@ -66,12 +66,14 @@ class AssistantClient:
 
     async def reply(self, message: str, memory: Any) -> AgentResult:
         now = self._local_now()
+        pinned_facts = await _load_pinned_facts(memory)
         toolbox = MemoryToolbox(
             memory=memory,
             user_message=message,
             write_mode=self.memory_write_mode,
             now=now,
         )
+        pinned_context = _pinned_context_text(pinned_facts)
         contents: list[dict[str, Any]] = [
             {
                 "role": "user",
@@ -80,6 +82,7 @@ class AssistantClient:
                         "text": (
                             f"Current local datetime: {now.isoformat()}\n"
                             f"Current local date: {now.date().isoformat()}\n\n"
+                            f"{pinned_context}"
                             f"User message:\n{message}"
                         )
                     }
@@ -247,8 +250,19 @@ class MemoryToolbox:
             if hasattr(self.memory, "manual_facts_for_date"):
                 facts.extend(await self.memory.manual_facts_for_date(date_value))
         else:
+            facts.extend(await self._search_companion_memories(query, broad=False))
             facts = filter_active_facts(facts, self.now)
         facts = _dedupe_facts(facts)
+
+        if (
+            not facts
+            and not date_value
+            and _looks_like_memory_question(f"{self.user_message} {query}")
+        ):
+            edges = await self._search_edges(query, date_value, broad=True)
+            facts = self.memory.edges_to_facts(edges)
+            facts.extend(await self._search_companion_memories(query, broad=True))
+            facts = _dedupe_facts(filter_active_facts(facts, self.now))
 
         self._add_retrieved_facts(facts)
         return ToolOutcome(
@@ -347,6 +361,14 @@ class MemoryToolbox:
             cancel_text, selected_edges
         )
         invalidated += manual_invalidated
+        if not date_value and hasattr(
+            self.memory, "invalidate_matching_companion_memories"
+        ):
+            companion_facts = await self._search_companion_memories(query, broad=False)
+            invalidated += await self.memory.invalidate_matching_companion_memories(
+                cancel_text,
+                companion_facts,
+            )
         return ToolOutcome(
             response={
                 "status": "ok",
@@ -357,12 +379,33 @@ class MemoryToolbox:
             summary=f"invalidated {invalidated} matching fact(s)",
         )
 
-    async def _search_edges(self, query: str, date_value: str) -> list[Any]:
+    async def _search_edges(
+        self, query: str, date_value: str, *, broad: bool = False
+    ) -> list[Any]:
         edges_by_key: dict[Any, Any] = {}
-        for search_query in _search_queries(query, date_value, self.user_message):
+        for search_query in _search_queries(
+            query, date_value, self.user_message, broad=broad
+        ):
             for edge in await self.memory.search_edges(search_query):
                 edges_by_key.setdefault(_edge_key(edge), edge)
         return list(edges_by_key.values())
+
+    async def _search_companion_memories(
+        self, query: str, *, broad: bool
+    ) -> list[RetrievedFact]:
+        if not hasattr(self.memory, "search_companion_memories"):
+            return []
+
+        facts_by_key: dict[tuple[str, str | None, str | None], RetrievedFact] = {}
+        for search_query in _search_queries(
+            query, "", self.user_message, broad=broad
+        ):
+            for fact in await self.memory.search_companion_memories(search_query):
+                facts_by_key.setdefault(
+                    (fact.fact, fact.valid_at, fact.invalid_at),
+                    fact,
+                )
+        return list(facts_by_key.values())
 
     def _current_message_for_memory(self) -> str:
         if self.write_mode == "both" and _looks_temporal_memory(self.user_message):
@@ -533,7 +576,9 @@ def _fact_matches_tool_date(
     return bool(filter_active_facts([fact], now))
 
 
-def _search_queries(query: str, date_value: str, user_message: str) -> list[str]:
+def _search_queries(
+    query: str, date_value: str, user_message: str, *, broad: bool = False
+) -> list[str]:
     queries = [query]
     if date_value:
         queries.extend(
@@ -541,6 +586,29 @@ def _search_queries(query: str, date_value: str, user_message: str) -> list[str]
                 f"{query} {date_value}",
                 f"{user_message} {date_value}",
                 f"lịch trình sự kiện kế hoạch ngày {date_value}",
+            ]
+        )
+    elif broad:
+        queries.extend(
+            [
+                user_message,
+                "sở thích của user",
+                "điều user không thích",
+                "thói quen của user",
+                "bối cảnh cá nhân của user",
+                "mục tiêu hiện tại của user",
+                "người liên quan với user",
+                "cảm xúc gần đây của user",
+                "áp lực stress buồn mệt lo lắng cảm xúc",
+                "cách hỗ trợ user",
+                "cách xưng hô với user",
+                "phong cách trả lời user muốn",
+                "ăn uống món ăn đồ uống cà phê rau mùi không thích dị ứng",
+                "so thich khong thich thoi quen ca phe rau mui di ung",
+                "ap luc stress buon met lo lang cam xuc ho tro",
+                "muc tieu du dinh dang co gang",
+                "anh chi ban nguoi yeu dong nghiep nguoi lien quan",
+                "user personal preferences dislikes goals relationships emotions",
             ]
         )
 
@@ -573,6 +641,60 @@ def _looks_temporal_memory(text: str) -> bool:
         "yesterday",
     )
     return any(marker in normalized for marker in markers)
+
+
+def _looks_like_memory_question(text: str) -> bool:
+    normalized = text.lower()
+    markers = (
+        "tôi",
+        "toi",
+        "tui",
+        "tao",
+        "mình",
+        "minh",
+        "sở thích",
+        "so thich",
+        "thích",
+        "thich",
+        "không thích",
+        "khong thich",
+        "ghét",
+        "ghet",
+        "nhớ",
+        "nho",
+        "memory",
+        "cảm xúc",
+        "cam xuc",
+        "buồn",
+        "buon",
+        "áp lực",
+        "ap luc",
+        "stress",
+        "mục tiêu",
+        "muc tieu",
+        "bạn tôi",
+        "ban toi",
+        "người yêu",
+        "nguoi yeu",
+        "xưng hô",
+        "xung ho",
+        "gọi",
+        "goi",
+    )
+    return any(marker in normalized for marker in markers)
+
+
+async def _load_pinned_facts(memory: Any) -> list[RetrievedFact]:
+    if not hasattr(memory, "pinned_memories"):
+        return []
+    return await memory.pinned_memories()
+
+
+def _pinned_context_text(facts: list[RetrievedFact]) -> str:
+    if not facts:
+        return ""
+    lines = "\n".join(f"- {fact.fact}" for fact in facts)
+    return f"Always relevant user memory:\n{lines}\n\n"
 
 
 def _normalize_relative_dates(text: str, now: datetime) -> str:

@@ -110,6 +110,12 @@ class GraphitiMemory:
 
     async def initialize(self) -> None:
         await self.client.build_indices_and_constraints()
+        await self.client.driver.execute_query(
+            """
+            CREATE INDEX companion_memory_group_id IF NOT EXISTS
+            FOR (m:COMPANION_MEMORY) ON (m.group_id)
+            """
+        )
         if self.settings.embedding_preload and isinstance(
             self.client.embedder, LocalQwenEmbedder
         ):
@@ -119,7 +125,9 @@ class GraphitiMemory:
         await self.client.close()
 
     async def search(self, message: str) -> list[RetrievedFact]:
-        return self.edges_to_facts(await self.search_edges(message))
+        facts = self.edges_to_facts(await self.search_edges(message))
+        facts.extend(await self.search_companion_memories(message))
+        return _dedupe_facts(facts)
 
     async def search_edges(self, message: str):
         return await self.client.search(
@@ -176,6 +184,99 @@ class GraphitiMemory:
             else None,
             created_at=datetime.now(LOCAL_TZ).isoformat(),
         )
+
+    async def add_companion_memory(
+        self,
+        memory_text: str,
+        *,
+        kind: str | None = None,
+        pinned: bool | None = None,
+    ) -> None:
+        normalized = memory_text.strip()
+        if not normalized:
+            return
+
+        inferred_kind, inferred_pinned = _classify_companion_memory(normalized)
+        await self.client.driver.execute_query(
+            """
+            CREATE (:COMPANION_MEMORY {
+                uuid: $uuid,
+                group_id: $group_id,
+                text: $text,
+                kind: $kind,
+                pinned: $pinned,
+                created_at: $created_at,
+                invalid_at: null
+            })
+            """,
+            uuid=str(uuid4()),
+            group_id=self.settings.group_id,
+            text=normalized,
+            kind=kind or inferred_kind,
+            pinned=inferred_pinned if pinned is None else pinned,
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+    async def pinned_memories(self) -> list[RetrievedFact]:
+        result = await self.client.driver.execute_query(
+            """
+            MATCH (m:COMPANION_MEMORY {group_id: $group_id})
+            WHERE m.invalid_at IS NULL AND m.pinned = true
+            RETURN m.text AS fact, null AS valid_at, m.invalid_at AS invalid_at
+            ORDER BY m.created_at DESC
+            LIMIT $limit
+            """,
+            group_id=self.settings.group_id,
+            limit=max(self.settings.retrieval_limit, 10),
+        )
+        return _records_to_facts(_records(result))
+
+    async def search_companion_memories(self, query: str) -> list[RetrievedFact]:
+        tokens = _search_tokens(query)
+        if not tokens:
+            return []
+
+        result = await self.client.driver.execute_query(
+            """
+            MATCH (m:COMPANION_MEMORY {group_id: $group_id})
+            WHERE m.invalid_at IS NULL
+              AND any(token IN $tokens WHERE toLower(m.text) CONTAINS token)
+            WITH m,
+                 size([token IN $tokens WHERE toLower(m.text) CONTAINS token]) AS score
+            RETURN m.text AS fact,
+                   null AS valid_at,
+                   m.invalid_at AS invalid_at,
+                   toFloat(score) AS score
+            ORDER BY m.pinned DESC, score DESC, m.created_at DESC
+            LIMIT $limit
+            """,
+            group_id=self.settings.group_id,
+            tokens=tokens,
+            limit=self.settings.retrieval_limit,
+        )
+        return _records_to_facts(_records(result))
+
+    async def invalidate_matching_companion_memories(
+        self, message: str, facts: list[RetrievedFact]
+    ) -> int:
+        invalid_at = datetime.now(timezone.utc).isoformat()
+        invalidated = 0
+        for fact in facts:
+            if not should_cancel_fact(message, fact):
+                continue
+            await self.client.driver.execute_query(
+                """
+                MATCH (m:COMPANION_MEMORY {group_id: $group_id, text: $text})
+                WHERE m.invalid_at IS NULL
+                SET m.invalid_at = $invalid_at
+                RETURN m.uuid AS uuid
+                """,
+                group_id=self.settings.group_id,
+                text=fact.fact,
+                invalid_at=invalid_at,
+            )
+            invalidated += 1
+        return invalidated
 
     async def manual_facts_for_date(self, target_date: str | date) -> list[RetrievedFact]:
         date_text = (
@@ -252,9 +353,11 @@ class GraphitiMemory:
         ]
 
     async def add_user_message(self, message: str) -> None:
+        await self.add_companion_memory(message)
         await self._add_episode("user", message)
 
     async def add_memory_fact(self, memory_text: str) -> None:
+        await self.add_companion_memory(memory_text)
         await self._add_episode("memory", memory_text)
 
     async def add_assistant_reply(self, reply: str) -> None:
@@ -262,11 +365,12 @@ class GraphitiMemory:
 
     async def _add_episode(self, speaker: str, content: str) -> None:
         now = datetime.now(LOCAL_TZ)
+        reference_time = now.astimezone(timezone.utc)
         await self.client.add_episode(
             name=f"{speaker}-{now.isoformat()}",
             episode_body=f"{speaker}: {content}",
             source_description=f"chat message from {speaker}",
-            reference_time=now,
+            reference_time=reference_time,
             source=EpisodeType.message,
             group_id=self.settings.group_id,
             custom_extraction_instructions=EXTRACTION_INSTRUCTIONS,
@@ -437,6 +541,144 @@ def _records(result: Any) -> list[Any]:
     if hasattr(result, "records"):
         return result.records
     return result[0]
+
+
+def _records_to_facts(records: list[Any]) -> list[RetrievedFact]:
+    return [
+        RetrievedFact(
+            fact=record["fact"],
+            valid_at=_iso_or_none(record["valid_at"]),
+            invalid_at=_iso_or_none(record["invalid_at"]),
+            score=record.get("score") if hasattr(record, "get") else None,
+        )
+        for record in records
+    ]
+
+
+def _dedupe_facts(facts: list[RetrievedFact]) -> list[RetrievedFact]:
+    deduped = []
+    seen = set()
+    for fact in facts:
+        key = (fact.fact, fact.valid_at, fact.invalid_at)
+        if key in seen:
+            continue
+        deduped.append(fact)
+        seen.add(key)
+    return deduped
+
+
+def _search_tokens(query: str) -> list[str]:
+    stop_words = {
+        "user",
+        "toi",
+        "tôi",
+        "tao",
+        "minh",
+        "mình",
+        "cua",
+        "của",
+        "ban",
+        "bạn",
+        "voi",
+        "với",
+        "hay",
+        "can",
+        "cần",
+        "điều",
+        "dieu",
+        "cách",
+        "cach",
+    }
+    tokens = []
+    seen = set()
+    for token in query.lower().replace("_", " ").split():
+        normalized = token.strip(".,:;!?()[]{}\"'")
+        if len(normalized) < 3 or normalized in stop_words or normalized in seen:
+            continue
+        tokens.append(normalized)
+        seen.add(normalized)
+    return tokens[:24]
+
+
+def _classify_companion_memory(text: str) -> tuple[str, bool]:
+    normalized = text.lower()
+    pinned_markers = (
+        "gọi tôi",
+        "goi toi",
+        "gọi tui",
+        "goi tui",
+        "xưng hô",
+        "xung ho",
+        "trả lời ngắn",
+        "tra loi ngan",
+        "ý chính trước",
+        "y chinh truoc",
+        "không khen",
+        "khong khen",
+        "sáo rỗng",
+        "sao rong",
+        "không chắc",
+        "khong chac",
+        "nếu không chắc",
+        "neu khong chac",
+        "đừng động viên",
+        "dung dong vien",
+    )
+    if any(marker in normalized for marker in pinned_markers):
+        return "conversation_preference", True
+
+    if any(
+        marker in normalized
+        for marker in (
+            "không thích",
+            "khong thich",
+            "không ăn",
+            "khong an",
+            "ghét",
+            "ghet",
+            "thích",
+            "thich",
+            "dị ứng",
+            "di ung",
+        )
+    ):
+        return "preference", False
+    if any(
+        marker in normalized
+        for marker in (
+            "áp lực",
+            "ap luc",
+            "buồn",
+            "buon",
+            "stress",
+            "mệt",
+            "met",
+            "lo lắng",
+            "lo lang",
+        )
+    ):
+        return "emotional_context", False
+    if any(
+        marker in normalized
+        for marker in ("mục tiêu", "muc tieu", "đang cố", "dang co", "dự định", "du dinh")
+    ):
+        return "goal", False
+    if any(
+        marker in normalized
+        for marker in (
+            "anh ",
+            "chị ",
+            "chi ",
+            "bạn ",
+            "ban ",
+            "người yêu",
+            "nguoi yeu",
+            "đồng nghiệp",
+            "dong nghiep",
+        )
+    ):
+        return "social_context", False
+    return "general", False
 
 
 def _build_gemini_structured_body(

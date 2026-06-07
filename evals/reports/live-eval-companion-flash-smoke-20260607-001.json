@@ -1,0 +1,411 @@
+{
+  "run_id": "companion-flash-smoke-20260607-001",
+  "created_at": "2026-06-07T16:38:12.526105",
+  "base_url": "http://127.0.0.1:8000",
+  "graphiti_group_id": "eval-companion-flash-smoke-20260607-001",
+  "summary": {
+    "total": 5,
+    "passed": 1,
+    "pass_rate": 0.2,
+    "critical_total": 1,
+    "critical_passed": 0,
+    "critical_pass_rate": 0.0,
+    "hallucinated_memory_count": 0,
+    "demo_ready": false,
+    "by_category": {
+      "everyday_memory": {
+        "total": 5,
+        "passed": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "case": {
+        "id": "everyday_001",
+        "category": "everyday_memory",
+        "critical": true,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+          "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung."
+        ],
+        "probe_message": "Nếu cuối tuần tui muốn ra ngoài làm khóa luận thì nên chọn kiểu quán nào?",
+        "expected_memory": [
+          "quán cà phê yên tĩnh",
+          "ít nhạc",
+          "có ổ cắm",
+          "làm việc lâu"
+        ],
+        "forbidden_memory": [
+          "quán đông người",
+          "nhạc lớn"
+        ],
+        "judge_notes": "Answer should recommend the remembered quiet cafe style, not generic cafe advice."
+      },
+      "known_memory_context": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung."
+      ],
+      "seed_results": [
+        {
+          "message": "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+          "reply": "Đã nhớ là bạn thích quán cà phê yên tĩnh, ít nhạc và có ổ cắm để làm việc lâu.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        },
+        {
+          "message": "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+          "reply": "Tôi hiểu. Môi trường ồn ào có thể gây mất tập trung.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Quán đông người và nhạc lớn làm bạn khó tập trung."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        }
+      ],
+      "probe_response": {
+        "reply": "Bạn muốn tìm một quán cà phê yên tĩnh, có wifi ổn định và không gian thoải mái để làm khóa luận phải không?",
+        "retrieved_facts": [],
+        "tool_trace": []
+      },
+      "judge": {
+        "passed": false,
+        "retrieval_correct": false,
+        "answer_grounded": false,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "fail",
+        "score": 1,
+        "reason": "The assistant did not retrieve the memory about the user's preferences for a quiet cafe with power outlets. Instead, it asked a clarifying question that rephrased the user's probe, which is not helpful. The tone is also not natural for a companion."
+      }
+    },
+    {
+      "case": {
+        "id": "everyday_002",
+        "category": "everyday_memory",
+        "critical": false,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+          "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui."
+        ],
+        "probe_message": "Tối nay ăn phở được không, có gì cần dặn quán không?",
+        "expected_memory": [
+          "không ăn rau mùi",
+          "né rau mùi"
+        ],
+        "forbidden_memory": [
+          "ăn rau mùi"
+        ],
+        "judge_notes": "Should mention avoiding coriander/rau mùi if giving food advice."
+      },
+      "known_memory_context": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+        "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+        "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui."
+      ],
+      "seed_results": [
+        {
+          "message": "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+          "reply": "Tôi đã ghi nhớ là bạn không ăn được rau mùi.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng không ăn được rau mùi."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        },
+        {
+          "message": "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui.",
+          "reply": "Đã rõ. Tôi sẽ nhớ không nhắc đến rau mùi khi nói chuyện đồ ăn với bạn.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng không thích rau mùi."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        }
+      ],
+      "probe_response": {
+        "reply": "Tối nay bạn muốn ăn phở à? Tôi không thấy có dặn dò gì đặc biệt cho quán phở trong trí nhớ của mình. Bạn có muốn dặn gì không?",
+        "retrieved_facts": [],
+        "tool_trace": [
+          {
+            "name": "search_memory",
+            "arguments": {
+              "date": "2026-06-07",
+              "query": "Tối nay ăn phở"
+            },
+            "result": "retrieved 0 active fact(s)"
+          }
+        ]
+      },
+      "judge": {
+        "passed": false,
+        "retrieval_correct": false,
+        "answer_grounded": false,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "pass",
+        "score": 1,
+        "reason": "The assistant failed to retrieve the memory about not eating coriander, which was directly relevant to the probe about eating pho and dặn dò (special instructions) for the restaurant. The tool trace shows a search for 'Tối nay ăn phở' which is too narrow and missed the relevant memory."
+      }
+    },
+    {
+      "case": {
+        "id": "everyday_003",
+        "category": "everyday_memory",
+        "critical": false,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+          "Tui đang muốn giảm thói quen thức khuya lại."
+        ],
+        "probe_message": "Nếu tối nay tui lại muốn code tới khuya thì nhắc tui sao cho hợp lý?",
+        "expected_memory": [
+          "thức khuya code",
+          "2 giờ sáng",
+          "dậy rất đuối",
+          "giảm thói quen thức khuya"
+        ],
+        "forbidden_memory": [
+          "khuyến khích thức tới 2 giờ"
+        ],
+        "judge_notes": "Should use the remembered sleep habit gently."
+      },
+      "known_memory_context": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+        "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+        "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui.",
+        "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+        "Tui đang muốn giảm thói quen thức khuya lại."
+      ],
+      "seed_results": [
+        {
+          "message": "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+          "reply": "Tôi hiểu rồi. Việc thức khuya đến 2 giờ sáng để code có thể khiến bạn mệt mỏi vào sáng hôm sau.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối."
+              },
+              "result": "saved manual temporal memory"
+            }
+          ]
+        },
+        {
+          "message": "Tui đang muốn giảm thói quen thức khuya lại.",
+          "reply": "Tôi đã ghi nhớ rằng bạn muốn giảm thói quen thức khuya.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_current_message",
+              "arguments": {},
+              "result": "saved current user message"
+            }
+          ]
+        }
+      ],
+      "probe_response": {
+        "reply": "Được thôi, tối nay nếu bạn muốn code tới khuya, tôi sẽ nhắc nhở bạn.",
+        "retrieved_facts": [],
+        "tool_trace": [
+          {
+            "name": "remember_fact",
+            "arguments": {
+              "memory_text": "Tối nay nhắc nhở người dùng nếu họ muốn code tới khuya."
+            },
+            "result": "saved manual temporal memory"
+          }
+        ]
+      },
+      "judge": {
+        "passed": false,
+        "retrieval_correct": false,
+        "answer_grounded": false,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "fail",
+        "score": 1,
+        "reason": "The assistant did not use the retrieved memory to provide a helpful reminder. It simply agreed to remind the user without incorporating the context of why the user wants to reduce staying up late (being tired the next day). The response is too generic and doesn't reflect understanding of the user's past statements."
+      }
+    },
+    {
+      "case": {
+        "id": "everyday_004",
+        "category": "everyday_memory",
+        "critical": false,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.",
+          "Còn khi nghiêm túc thì gọi tui bằng tôi cũng được."
+        ],
+        "probe_message": "Nói chuyện với tui bình thường thì nên xưng hô sao?",
+        "expected_memory": [
+          "gọi tui là ông",
+          "tự nhiên hơn gọi bạn"
+        ],
+        "forbidden_memory": [
+          "gọi bạn là mặc định"
+        ],
+        "judge_notes": "Should recall the preferred casual address."
+      },
+      "known_memory_context": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+        "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+        "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui.",
+        "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+        "Tui đang muốn giảm thói quen thức khuya lại.",
+        "Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.",
+        "Còn khi nghiêm túc thì gọi tui bằng tôi cũng được."
+      ],
+      "seed_results": [
+        {
+          "message": "Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.",
+          "reply": "Đã rõ, tôi sẽ gọi bạn là \"ông\" khi chúng ta trò chuyện.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng thích được gọi là \"ông\" trong lúc chat."
+              },
+              "result": "saved manual temporal memory"
+            }
+          ]
+        },
+        {
+          "message": "Còn khi nghiêm túc thì gọi tui bằng tôi cũng được.",
+          "reply": "Đã rõ.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Khi nghiêm túc thì gọi tui bằng tôi cũng được."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        }
+      ],
+      "probe_response": {
+        "reply": "Bạn cứ gọi mình là tôi nhé.",
+        "retrieved_facts": [],
+        "tool_trace": []
+      },
+      "judge": {
+        "passed": false,
+        "retrieval_correct": false,
+        "answer_grounded": false,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "fail",
+        "score": 1,
+        "reason": "The assistant failed to retrieve the memory about preferred address. The user explicitly stated 'Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.' and 'Còn khi nghiêm túc thì gọi tui bằng tôi cũng được.' The assistant's reply 'Bạn cứ gọi mình là tôi nhé.' contradicts the user's preference for casual chat and suggests a default that was not mentioned."
+      }
+    },
+    {
+      "case": {
+        "id": "everyday_005",
+        "category": "everyday_memory",
+        "critical": false,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Tui thích câu trả lời thẳng, ngắn, có ý chính trước.",
+          "Nếu giải thích dài thì tui dễ mất kiên nhẫn."
+        ],
+        "probe_message": "Khi góp ý hướng làm của tui thì ông nên nói kiểu gì?",
+        "expected_memory": [
+          "thẳng",
+          "ngắn",
+          "ý chính trước",
+          "dễ mất kiên nhẫn"
+        ],
+        "forbidden_memory": [
+          "trả lời dài dòng"
+        ],
+        "judge_notes": "Should recall communication preference."
+      },
+      "known_memory_context": [
+        "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+        "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+        "Tui không ăn rau mùi được, ăn vào là thấy khó chịu liền.",
+        "Nếu sau này nói chuyện đồ ăn thì nhớ né rau mùi giúp tui.",
+        "Tui hay thức khuya code tới 2 giờ sáng, nhưng sáng hôm sau dậy rất đuối.",
+        "Tui đang muốn giảm thói quen thức khuya lại.",
+        "Tui thích người khác gọi tui là ông trong lúc chat, nghe tự nhiên hơn gọi bạn.",
+        "Còn khi nghiêm túc thì gọi tui bằng tôi cũng được.",
+        "Tui thích câu trả lời thẳng, ngắn, có ý chính trước.",
+        "Nếu giải thích dài thì tui dễ mất kiên nhẫn."
+      ],
+      "seed_results": [
+        {
+          "message": "Tui thích câu trả lời thẳng, ngắn, có ý chính trước.",
+          "reply": "Đã rõ. Tôi sẽ trả lời thẳng, ngắn gọn và có ý chính trước.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng thích câu trả lời thẳng, ngắn, có ý chính trước."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        },
+        {
+          "message": "Nếu giải thích dài thì tui dễ mất kiên nhẫn.",
+          "reply": "Tôi hiểu. Tôi sẽ cố gắng trả lời ngắn gọn và đi thẳng vào vấn đề.",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng dễ mất kiên nhẫn nếu giải thích dài."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        }
+      ],
+      "probe_response": {
+        "reply": "Tôi nên nói thẳng, ngắn gọn và có ý chính trước.",
+        "retrieved_facts": [],
+        "tool_trace": []
+      },
+      "judge": {
+        "passed": true,
+        "retrieval_correct": false,
+        "answer_grounded": true,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "pass",
+        "score": 3,
+        "reason": "The answer is correct and grounded in the expected memory, but the retrieval mechanism failed to identify the relevant memory. The assistant still managed to answer correctly, likely due to the probe message containing the key information directly."
+      }
+    }
+  ]
+}

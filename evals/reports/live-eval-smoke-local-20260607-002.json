@@ -1,0 +1,84 @@
+{
+  "run_id": "smoke-local-20260607-002",
+  "created_at": "2026-06-07T15:17:35.672734",
+  "base_url": "http://127.0.0.1:8000",
+  "graphiti_group_id": "chat-lab-test-002",
+  "summary": {
+    "total": 1,
+    "passed": 0,
+    "pass_rate": 0.0,
+    "critical_total": 1,
+    "critical_passed": 0,
+    "critical_pass_rate": 0.0,
+    "hallucinated_memory_count": 0,
+    "demo_ready": false,
+    "by_category": {
+      "everyday_memory": {
+        "total": 1,
+        "passed": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "case": {
+        "id": "everyday_001",
+        "category": "everyday_memory",
+        "critical": true,
+        "should_retrieve": true,
+        "seed_messages": [
+          "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+          "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung."
+        ],
+        "probe_message": "Nếu cuối tuần tui muốn ra ngoài làm khóa luận thì nên chọn kiểu quán nào?",
+        "expected_memory": [
+          "quán cà phê yên tĩnh",
+          "ít nhạc",
+          "có ổ cắm",
+          "làm việc lâu"
+        ],
+        "forbidden_memory": [
+          "quán đông người",
+          "nhạc lớn"
+        ],
+        "judge_notes": "Answer should recommend the remembered quiet cafe style, not generic cafe advice."
+      },
+      "seed_results": [
+        {
+          "message": "Nhớ nha, tui thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để ngồi làm việc lâu.",
+          "reply": "Được rồi, mình đã ghi nhớ sở thích của bạn: bạn thích những quán cà phê yên tĩnh, ít nhạc và có ổ cắm để ngồi làm việc lâu. Khi nào bạn cần tìm quán, cứ hỏi mình nhé!",
+          "retrieved_facts": [],
+          "tool_trace": [
+            {
+              "name": "remember_fact",
+              "arguments": {
+                "memory_text": "Người dùng thích quán cà phê yên tĩnh, ít nhạc, có ổ cắm để làm việc lâu."
+              },
+              "result": "saved model-authored memory"
+            }
+          ]
+        },
+        {
+          "message": "Mấy quán đông người với nhạc lớn làm tui rất khó tập trung.",
+          "reply": "Mình hiểu cảm giác đó. Những nơi ồn ào với nhạc lớn thường gây xao nhãng và làm giảm khả năng tập trung đáng kể.\n\nBạn có thường xuyên phải làm việc ở những nơi như vậy không, hay bạn đang tìm kiếm những không gian yên tĩnh hơn để làm việc?",
+          "retrieved_facts": [],
+          "tool_trace": []
+        }
+      ],
+      "probe_response": {
+        "reply": "Để chọn quán làm khóa luận vào cuối tuần, bạn nên ưu tiên những tiêu chí sau để đảm bảo hiệu quả công việc:\n\n1.  **Không gian yên tĩnh:** Tránh các quán có nhạc quá to hoặc quá đông đúc, ồn ào. Các quán cà phê sách hoặc các quán có khu vực làm việc riêng (coworking space) là lựa chọn lý tưởng.\n2.  **Bàn ghế phù hợp:** Ưu tiên bàn có độ cao vừa phải, ghế có tựa lưng thoải mái để ngồi lâu không bị mỏi.\n3.  **Ổ cắm điện:** Đây là yếu tố quan trọng nhất. Hãy chọn quán có nhiều ổ cắm điện gần bàn ngồi để không lo hết pin laptop.\n4.  **Wi-Fi ổn định:** Kiểm tra đánh giá trên Google Maps hoặc hỏi nhân viên trước khi vào để đảm bảo mạng đủ mạnh cho việc tra cứu tài liệu.\n5.  **Ánh sáng:** Chọn nơi có ánh sáng tự nhiên hoặc đèn đủ sáng để không hại mắt khi làm việc lâu.\n\n**Một vài gợi ý kiểu quán:**\n*   **Chuỗi quán cà phê làm việc (Work-friendly cafes):** Thường được thiết kế cho dân văn phòng/sinh viên, có nhiều ổ cắm và không gian tách biệt.\n*   **Thư viện hoặc quán cà phê trong thư viện:** Đây là môi trường tập trung nhất.\n*   **Quán cà phê vắng vào buổi sáng:** Nếu bạn có thể dậy sớm, các quán cà phê thường rất yên tĩnh vào khung giờ 8h - 10h sáng cuối tuần.\n\nBạn có muốn mình tìm thử một vài quán cụ thể ở khu vực nào không? Nếu có, hãy cho mình biết địa điểm nhé!",
+        "retrieved_facts": [],
+        "tool_trace": []
+      },
+      "judge": {
+        "passed": false,
+        "retrieval_correct": false,
+        "answer_grounded": false,
+        "hallucinated_memory": false,
+        "natural_friend_tone": "pass",
+        "score": 2,
+        "reason": "The assistant failed to retrieve the specific personal preferences stored in memory (quiet, low music, power outlets) and instead provided generic advice. It did not acknowledge that it remembered the user's specific requirements for working."
+      }
+    }
+  ]
+}
