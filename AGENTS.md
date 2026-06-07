@@ -108,13 +108,11 @@ For multi-step tasks, state a brief plan:
 3. [Step] → verify: [check]
 ```
 
-## Current Handoff: Memory Eval And Next Direction
+## Current Handoff: Memory Runtime Rebuild
 
-- Before implementing memory changes, read `docs/memory_eval_handoff.md`.
-- The latest live eval showed the app is **not demo-ready**: `18/70` pass, `6/14` critical pass.
-- The main issue is not memory overuse. `dont_overuse_memory` passed `8/8`.
-- The main issue is recall failure when memory is needed: everyday preferences, emotional continuity, pinned conversational preferences, and some guardrails.
-- Keep Graphiti for now, but add a simple companion memory layer and pinned memory context before considering a larger architecture replacement.
+- Before implementing memory changes, read `docs/memory_runtime_rebuild_plan.md`.
+- That plan supersedes the older `docs/memory_eval_handoff.md` recommendation to keep Graphiti and add a companion memory layer.
+- The current runtime direction is a full memory rebuild: remove Graphiti/Neo4j from the active app path and replace it with a SQLite + embedding memory store.
 - Preserve the existing `/api/chat` response shape: `reply`, `retrieved_facts`, and `tool_trace`.
-- Use eval-driven iteration. A next acceptable target is at least `40/70` overall and `10/14` critical, while keeping no-memory cases passing.
-- Do not turn the product into rigid if/else task tables. The intended product direction is a natural Vietnamese companion that remembers context, not only a task/debt/calendar assistant.
+- Do not reintroduce hardcoded semantic keyword lists, broad fallback query strings, or token `CONTAINS` as the main memory retrieval path.
+- The product direction is a natural Vietnamese companion that remembers context from real conversation. The legacy 70-case eval is only a regression signal, not the product truth.

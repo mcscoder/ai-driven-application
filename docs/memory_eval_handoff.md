@@ -12,7 +12,7 @@ This note captures the state of the project after the first serious live eval ru
 
 ## Important Existing Changes
 
-- `evals/live_scenarios.json` contains the 70-case live eval suite.
+- The old `evals/live_scenarios.json` suite was removed because it no longer matched the product target.
 - `evals/run_live_eval.py` runs the suite against a live app via `/api/chat` and uses the configured LLM as judge.
 - `evals/README.md` documents dry-run, smoke, and live eval commands.
 - `.gitignore` ignores `evals/reports/`.
@@ -67,6 +67,9 @@ The dominant failure modes are:
 
 ## Recommended Next Implementation Direction
 
+This section is obsolete. Use `docs/memory_runtime_rebuild_plan.md` instead.
+The current memory model has only `pin` and `long_term`.
+
 Do not replace Graphiti yet. The next step should be a focused memory pipeline improvement:
 
 1. Add a direct companion memory layer in Neo4j.
@@ -76,7 +79,7 @@ Do not replace Graphiti yet. The next step should be a focused memory pipeline i
 
 2. Add pinned memory.
    - Pinned memory should be loaded every chat turn and injected into the first prompt.
-   - Use this for always-relevant preferences: address style, answer length, uncertainty handling, praise/support preference, and other durable conversation preferences.
+   - Use this for pinned preferences: address style, answer length, uncertainty handling, praise/support preference, and other durable conversation preferences.
    - This is not if/else product logic. It is stable conversational context.
 
 3. Write to both Graphiti and companion memory.

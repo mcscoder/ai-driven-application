@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "description": "Target daily-use Vietnamese companion memory eval scenarios.",
+  "cases": [
+    {
+      "id": "style_001_addressing",
+      "category": "conversation_style",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Khi chat bình thường, gọi tui là ông nha, nghe tự nhiên hơn.",
+        "Nếu câu nào nghiêm túc hoặc cần rõ ràng thì xưng tôi cũng được."
+      ],
+      "probe_message": "Bình thường nói chuyện với tui thì ông nên xưng hô sao?",
+      "expected_memory": ["gọi tui là ông", "tự nhiên hơn", "nghiêm túc thì xưng tôi"],
+      "forbidden_memory": ["mặc định gọi bạn"],
+      "judge_notes": "Answer should recall and apply the user's preferred casual address."
+    },
+    {
+      "id": "style_002_direct_feedback",
+      "category": "conversation_style",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thích góp ý thẳng, nói vấn đề chính trước.",
+        "Đừng khen xã giao dài dòng trước khi chỉ ra lỗi."
+      ],
+      "probe_message": "Nếu góp ý kế hoạch học của tui thì nên nói kiểu gì?",
+      "expected_memory": ["góp ý thẳng", "vấn đề chính trước", "đừng khen xã giao dài dòng"],
+      "forbidden_memory": ["khen xã giao dài dòng"],
+      "judge_notes": "Answer should recall the feedback style and avoid generic praise."
+    },
+    {
+      "id": "daily_001_cafe_work",
+      "category": "daily_preference",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nếu ra quán làm việc, tui cần chỗ yên tĩnh, ít nhạc và có ổ cắm.",
+        "Quán đông với nhạc lớn làm tui mất tập trung rất nhanh."
+      ],
+      "probe_message": "Cuối tuần ra ngoài làm khóa luận thì nên chọn quán kiểu gì cho hợp tui?",
+      "expected_memory": ["yên tĩnh", "ít nhạc", "có ổ cắm"],
+      "forbidden_memory": ["quán đông", "nhạc lớn"],
+      "judge_notes": "Answer should recommend the remembered cafe conditions, not generic cafe advice."
+    },
+    {
+      "id": "daily_002_food_dislike",
+      "category": "daily_preference",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui không ăn được rau mùi, ăn vào là khó chịu liền.",
+        "Sau này nếu nói đồ ăn thì nhớ dặn né rau mùi giúp tui."
+      ],
+      "probe_message": "Tối nay ăn phở thì có gì cần dặn quán không?",
+      "expected_memory": ["không ăn được rau mùi", "né rau mùi"],
+      "forbidden_memory": ["thêm rau mùi"],
+      "judge_notes": "Answer should mention avoiding coriander if giving food advice."
+    },
+    {
+      "id": "daily_003_drink_preference",
+      "category": "daily_preference",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Buổi chiều tui thích uống trà đào ít đá.",
+        "Đồ quá ngọt làm tui nhanh ngán."
+      ],
+      "probe_message": "Chiều nay mua nước gì cho hợp gu tui?",
+      "expected_memory": ["trà đào ít đá", "không quá ngọt"],
+      "forbidden_memory": ["đồ quá ngọt"],
+      "judge_notes": "Answer should use the remembered drink preference."
+    },
+    {
+      "id": "study_001_report_focus",
+      "category": "work_study",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tuần này tui đang làm bài báo cáo tốt nghiệp.",
+        "Phần thiết kế sản phẩm là phần tui thấy khó nhất, nên mỗi tối tui muốn xử lý một đoạn nhỏ thôi."
+      ],
+      "probe_message": "Tối nay tui nên tập trung phần nào của bài báo cáo để đỡ bị quá tải?",
+      "expected_memory": ["bài báo cáo tốt nghiệp", "phần thiết kế sản phẩm", "mỗi tối một đoạn nhỏ"],
+      "forbidden_memory": ["làm hết trong một tối"],
+      "judge_notes": "Answer should use the user's real study/work context and suggest a small next step."
+    },
+    {
+      "id": "study_002_exam_habit",
+      "category": "work_study",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Khi ôn thi, tui nhớ tốt hơn nếu làm đề ngắn rồi sửa lỗi ngay.",
+        "Đọc lý thuyết quá lâu một mạch làm tui rất dễ buồn ngủ."
+      ],
+      "probe_message": "Tối nay ôn thi thì nên học kiểu gì cho hợp tui?",
+      "expected_memory": ["làm đề ngắn", "sửa lỗi ngay", "không đọc lý thuyết quá lâu"],
+      "forbidden_memory": ["đọc lý thuyết quá lâu một mạch"],
+      "judge_notes": "Answer should recall the study habit that works for the user."
+    },
+    {
+      "id": "relationship_001_friend_context",
+      "category": "relationship",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Anh Tú là người hay chơi game chung với tui cuối tuần.",
+        "Nếu tui nhắc anh Tú thì thường là đang nói lịch chơi game."
+      ],
+      "probe_message": "Anh Tú là ai trong mấy chuyện tui hay nhắc?",
+      "expected_memory": ["chơi game chung", "cuối tuần", "lịch chơi game"],
+      "forbidden_memory": ["đồng nghiệp", "người yêu"],
+      "judge_notes": "Answer should identify the relationship without inventing details."
+    },
+    {
+      "id": "relationship_002_family_context",
+      "category": "relationship",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Mẹ tui không rành công nghệ, nên khi giải thích cho mẹ phải dùng ví dụ đời thường.",
+        "Mẹ tui dễ bị rối nếu dùng thuật ngữ khó."
+      ],
+      "probe_message": "Nếu tui cần giải thích ngân hàng số cho mẹ thì nên nói kiểu gì?",
+      "expected_memory": ["mẹ không rành công nghệ", "ví dụ đời thường", "tránh thuật ngữ khó"],
+      "forbidden_memory": ["dùng thuật ngữ khó"],
+      "judge_notes": "Answer should use the remembered family communication context."
+    },
+    {
+      "id": "emotional_001_support_style",
+      "category": "emotional_context",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Khi tui bị kẹt lâu, tui dễ nản vì cảm giác làm mãi không xong.",
+        "Lúc đó tui cần ông chỉ bước nhỏ tiếp theo, đừng động viên chung chung."
+      ],
+      "probe_message": "Nếu tối nay tui lại kẹt bài báo cáo thì ông nên phản hồi sao cho hợp tui?",
+      "expected_memory": ["chỉ bước nhỏ tiếp theo", "đừng động viên chung chung"],
+      "forbidden_memory": ["động viên chung chung"],
+      "judge_notes": "Answer should apply the remembered support preference."
+    },
+    {
+      "id": "schedule_001_specific_plan",
+      "category": "schedule",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Chiều thứ bảy này tui có hẹn chơi game với anh Tú lúc 3 giờ.",
+        "Nhắc nhẹ là trước đó tui muốn nghỉ mắt khoảng 20 phút."
+      ],
+      "probe_message": "Thứ bảy này trước buổi chơi game tui nên nhớ gì?",
+      "expected_memory": ["chơi game với anh Tú", "3 giờ", "nghỉ mắt khoảng 20 phút"],
+      "forbidden_memory": ["không có lịch"],
+      "judge_notes": "Answer should recall the scheduled plan and prep note."
+    },
+    {
+      "id": "debt_001_direction",
+      "category": "debt",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Ghi nhớ: Minh còn nợ tui 60k tiền ăn tối.",
+        "Còn tui nợ Nam 30k tiền gửi xe."
+      ],
+      "probe_message": "Ai đang nợ ai bao nhiêu?",
+      "expected_memory": ["Minh nợ tui 60k", "tui nợ Nam 30k"],
+      "forbidden_memory": ["tui nợ Minh 60k", "Nam nợ tui 30k"],
+      "judge_notes": "Answer must preserve debt direction exactly."
+    },
+    {
+      "id": "correction_001_drink_update",
+      "category": "correction_update",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Trước giờ buổi tối tui hay uống trà sữa.",
+        "Cập nhật lại nha: buổi tối tui chuyển sang trà nóng ít đường để dễ ngủ hơn."
+      ],
+      "probe_message": "Tối nay nên pha đồ uống gì theo thói quen mới?",
+      "expected_memory": ["trà nóng ít đường", "dễ ngủ hơn"],
+      "forbidden_memory": ["trà sữa"],
+      "judge_notes": "Answer should use the newer corrected preference, not the old one."
+    },
+    {
+      "id": "correction_002_exercise_update",
+      "category": "correction_update",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Ban đầu tui định chạy bộ mỗi sáng.",
+        "Sửa lại: đầu gối tui hơi đau nên tuần này tui chỉ đi bộ nhẹ buổi tối thôi."
+      ],
+      "probe_message": "Tối nay vận động thì nên làm gì theo cập nhật mới?",
+      "expected_memory": ["đi bộ nhẹ buổi tối", "đầu gối hơi đau"],
+      "forbidden_memory": ["chạy bộ mỗi sáng"],
+      "judge_notes": "Answer should honor the corrected current exercise plan."
+    },
+    {
+      "id": "selector_001_relevant_only",
+      "category": "memory_selection",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Buổi sáng tui thích ăn bánh mì trứng.",
+        "Tui cũng thích quán yên tĩnh khi làm việc bên ngoài.",
+        "Tui không thích bị khen sáo rỗng."
+      ],
+      "probe_message": "Sáng mai ăn gì nhanh mà hợp gu tui?",
+      "expected_memory": ["bánh mì trứng"],
+      "forbidden_memory": ["quán yên tĩnh", "khen sáo rỗng"],
+      "judge_notes": "Answer should use only the directly relevant breakfast memory."
+    },
+    {
+      "id": "selector_002_no_memory_translation",
+      "category": "no_memory",
+      "critical": true,
+      "should_retrieve": false,
+      "seed_messages": [
+        "Tui đang tiết kiệm tiền nên thích món ăn dưới 50k."
+      ],
+      "probe_message": "Dịch câu 'I will call you after dinner' sang tiếng Việt giúp tui.",
+      "expected_memory": [],
+      "forbidden_memory": ["tiết kiệm tiền", "dưới 50k"],
+      "judge_notes": "This is a translation request; unrelated memory should not affect the answer."
+    },
+    {
+      "id": "selector_003_no_memory_math",
+      "category": "no_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [
+        "Tui thích câu trả lời ngắn khi hỏi chuyện học."
+      ],
+      "probe_message": "17 nhân 24 bằng bao nhiêu?",
+      "expected_memory": [],
+      "forbidden_memory": ["chuyện học", "câu trả lời ngắn"],
+      "judge_notes": "This is a simple math question; answer directly without personal memory."
+    },
+    {
+      "id": "selector_004_no_memory_general",
+      "category": "no_memory",
+      "critical": false,
+      "should_retrieve": false,
+      "seed_messages": [
+        "Tui thích ăn sáng bằng bánh mì trứng."
+      ],
+      "probe_message": "Nước sôi ở nhiệt độ khoảng bao nhiêu độ C?",
+      "expected_memory": [],
+      "forbidden_memory": ["bánh mì trứng"],
+      "judge_notes": "This is a general knowledge question; answer should not pull food memory."
+    },
+    {
+      "id": "pin_001_applies_every_turn",
+      "category": "pin_memory",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Từ giờ nếu tui hỏi hướng làm, hãy trả lời ngắn với ý chính trước.",
+        "Nếu có rủi ro thì nói thẳng, đừng vòng vo."
+      ],
+      "probe_message": "Nên nhận thêm việc cuối tuần này không?",
+      "expected_memory": ["trả lời ngắn", "ý chính trước", "nói thẳng rủi ro"],
+      "forbidden_memory": ["vòng vo"],
+      "judge_notes": "Answer should apply the pinned style memory while answering the current question."
+    },
+    {
+      "id": "long_context_001_relevant_memory",
+      "category": "long_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tui thích làm việc buổi sáng vì đầu óc tỉnh hơn.",
+        "Khi học ngoại ngữ, tui nhớ tốt hơn nếu có ví dụ ngắn.",
+        "Tui không thích câu trả lời quá hoa mỹ.",
+        "Về bài báo cáo, tui đang tập trung phần thiết kế sản phẩm.",
+        "Nếu giải thích khái niệm mới cho tui thì nên dùng ví dụ ngắn trước."
+      ],
+      "probe_message": "Giải thích khái niệm lãi kép cho tui thì nên trình bày theo kiểu nào cho hợp?",
+      "expected_memory": ["ví dụ ngắn", "không quá hoa mỹ"],
+      "forbidden_memory": ["phần thiết kế sản phẩm", "làm việc buổi sáng"],
+      "judge_notes": "Answer should select the relevant explanation-style memory from longer context."
+    }
+  ]
+}

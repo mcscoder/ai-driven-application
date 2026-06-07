@@ -1,35 +1,62 @@
 import json
-import re
-from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 import httpx
+from pydantic import BaseModel, Field
 
-from app.fact_filter import (
-    LOCAL_TZ,
-    filter_active_facts,
-    filter_active_facts_for_date,
-)
+from app.memory_store import ConversationTurn, MemoryRecord, MemoryStore
 from app.schemas import RetrievedFact, ToolTrace
+from app.time_utils import LOCAL_TZ
 
 
-AGENT_SYSTEM_PROMPT = """You are a concise, natural chat assistant with memory tools.
-Use tools before answering when the user asks about remembered information, schedules,
-debts, plans, cancellations, or updates.
+MemoryType = Literal["pin", "long_term"]
+MemoryOpName = Literal["create", "supersede", "delete", "ignore"]
 
-Rules:
-- For memory recall questions, call search_memory before answering.
-- For scheduled-event questions with relative dates like "tomorrow" or "ngay mai",
-  pass the absolute local date as YYYY-MM-DD.
-- For durable user statements or scheduled events, call an available remember tool
-  before the final reply.
-- For cancellations or changes, call cancel_matching_facts for the old memory first.
-- Do not invent memory. Only save information grounded in the current user message.
-- Preserve debt direction exactly: "A owes B" is different from "B owes A".
-- The user may write in Vietnamese; answer in the same language as the user.
-"""
+
+PLANNER_SYSTEM_PROMPT = """You decide whether a Vietnamese chat assistant needs long-term memory.
+Return JSON only.
+
+Use memory when the user asks about prior preferences, prior decisions, personal context,
+relationships, corrections, schedules, work/study context, or emotional/support context.
+Do not use memory for general knowledge, translation, formatting, coding questions, or math
+unless the user explicitly asks for remembered personal context.
+
+If memory is needed, write one to three semantic search queries in the user's language.
+Do not copy backend categories. Do not use keyword lists. Write natural queries that would
+retrieve facts needed to answer the current message."""
+
+
+SELECTOR_SYSTEM_PROMPT = """Select only memories that directly help answer the current user message.
+Reject memories that are merely generally true, same-topic but not useful, or likely to distract.
+Return JSON only. If nothing is directly relevant, select no ids."""
+
+
+ANSWER_SYSTEM_PROMPT = """You are a concise, natural Vietnamese companion assistant.
+Answer in the user's language and style.
+
+Use only the current message, recent conversation, pinned memories, and selected
+memories supplied in the prompt. Do not invent remembered facts. If selected memory is empty
+and the user asks for remembered context, say you do not have enough remembered information.
+Keep the answer useful and direct."""
+
+
+CURATOR_SYSTEM_PROMPT = """You maintain durable long-term memory for a Vietnamese companion assistant.
+Return JSON only.
+
+Create memory only for durable user-grounded facts, preferences, relationships, work or study context,
+support style, schedules, debts, or corrections from the current user message.
+Do not store generic questions, one-off small talk, assistant claims, or facts inferred only from
+the assistant reply.
+
+Use memory_type=pin only for global interaction preferences that should affect every turn, such
+as how to address the user, answer length, uncertainty handling, or support style. Everything
+else is memory_type=long_term.
+
+For corrections, supersede or delete existing memory by id when the prompt provides an existing
+memory that is being replaced. Preserve debt direction exactly."""
 
 
 @dataclass
@@ -39,10 +66,27 @@ class AgentResult:
     tool_trace: list[ToolTrace]
 
 
-@dataclass
-class ToolOutcome:
-    response: dict[str, Any]
-    summary: str
+class MemoryPlan(BaseModel):
+    needs_memory: bool
+    queries: list[str] = Field(default_factory=list, max_length=3)
+    reason: str = ""
+
+
+class MemorySelection(BaseModel):
+    selected_ids: list[str] = Field(default_factory=list)
+    rejected_ids: list[str] = Field(default_factory=list)
+    reason: str = ""
+
+
+class MemoryOperation(BaseModel):
+    op: MemoryOpName
+    text: str = ""
+    memory_type: MemoryType = "long_term"
+    replaces_id: str | None = None
+
+
+class MemoryCuration(BaseModel):
+    operations: list[MemoryOperation] = Field(default_factory=list, max_length=6)
 
 
 class AssistantClient:
@@ -51,130 +95,275 @@ class AssistantClient:
         base_url: str,
         api_key: str,
         model: str,
-        memory_write_mode: str = "both",
-        max_tool_iterations: int = 6,
         transport: httpx.AsyncBaseTransport | None = None,
-        now_factory: Callable[[], datetime] | None = None,
+        now_factory: Any | None = None,
     ):
         self.base_url = base_url
         self.api_key = api_key
         self.model = model
-        self.memory_write_mode = memory_write_mode
-        self.max_tool_iterations = max_tool_iterations
         self.transport = transport
         self.now_factory = now_factory or (lambda: datetime.now(LOCAL_TZ))
 
-    async def reply(self, message: str, memory: Any) -> AgentResult:
+    async def reply(self, message: str, memory: MemoryStore) -> AgentResult:
         now = self._local_now()
-        pinned_facts = await _load_pinned_facts(memory)
-        toolbox = MemoryToolbox(
-            memory=memory,
-            user_message=message,
-            write_mode=self.memory_write_mode,
-            now=now,
-        )
-        pinned_context = _pinned_context_text(pinned_facts)
-        contents: list[dict[str, Any]] = [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": (
-                            f"Current local datetime: {now.isoformat()}\n"
-                            f"Current local date: {now.date().isoformat()}\n\n"
-                            f"{pinned_context}"
-                            f"User message:\n{message}"
-                        )
-                    }
-                ],
-            }
-        ]
-        tool_declarations = build_tool_declarations(self.memory_write_mode)
+        recent_turns = await memory.recent_turns()
+        pin_memories = await memory.pin_memories()
         trace: list[ToolTrace] = []
 
-        for _ in range(self.max_tool_iterations):
-            payload = await self._generate(contents, tool_declarations)
-            content = _first_content(payload)
-            function_calls = _extract_function_calls(content)
-            if not function_calls:
-                return AgentResult(
-                    reply=_content_text(content),
-                    retrieved_facts=toolbox.retrieved_facts,
-                    tool_trace=trace,
-                )
-
-            contents.append(content)
-            response_parts: list[dict[str, Any]] = []
-            for function_call in function_calls:
-                name = str(function_call.get("name", ""))
-                arguments = _function_arguments(function_call)
-                outcome = await toolbox.call(name, arguments)
-                trace.append(
-                    ToolTrace(
-                        name=name,
-                        arguments=arguments,
-                        result=outcome.summary,
-                    )
-                )
-                function_response: dict[str, Any] = {
-                    "name": name,
-                    "response": outcome.response,
-                }
-                call_id = function_call.get("id")
-                if call_id is not None:
-                    function_response["id"] = call_id
-                response_parts.append({"functionResponse": function_response})
-
-            contents.append({"role": "user", "parts": response_parts})
-
-        contents.append(
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": (
-                            "Tool iteration limit reached. Provide the final "
-                            "user-facing answer from the tool results so far. "
-                            "Do not call more tools."
-                        )
-                    }
-                ],
-            }
+        plan = await self._plan_memory(message, recent_turns, pin_memories, now)
+        queries = _clean_queries(plan)
+        trace.append(
+            ToolTrace(
+                name="memory_planner",
+                arguments={
+                    "needs_memory": plan.needs_memory,
+                    "query_count": len(queries),
+                    "queries": queries,
+                },
+                result=plan.reason or "planned memory use",
+            )
         )
-        payload = await self._generate(contents, [])
-        content = _first_content(payload)
+
+        candidates: list[MemoryRecord] = []
+        selected: list[MemoryRecord] = []
+        if plan.needs_memory and queries:
+            candidates = await memory.search(queries)
+            trace.append(
+                ToolTrace(
+                    name="memory_search",
+                    arguments={"queries": queries, "candidate_count": len(candidates)},
+                    result=f"retrieved {len(candidates)} candidate memory item(s)",
+                )
+            )
+            selection = await self._select_memories(
+                message,
+                recent_turns,
+                pin_memories,
+                candidates,
+                now,
+            )
+            selected_ids = set(selection.selected_ids)
+            selected = [item for item in candidates if item.id in selected_ids]
+            trace.append(
+                ToolTrace(
+                    name="memory_selector",
+                    arguments={
+                        "selected_count": len(selected),
+                        "rejected_count": len(selection.rejected_ids),
+                        "selected_ids": selection.selected_ids,
+                        "rejected_ids": selection.rejected_ids,
+                    },
+                    result=selection.reason
+                    or f"selected {len(selected)} memory item(s)",
+                )
+            )
+        else:
+            trace.append(
+                ToolTrace(
+                    name="memory_search",
+                    arguments={"queries": [], "candidate_count": 0},
+                    result="skipped memory search",
+                )
+            )
+            trace.append(
+                ToolTrace(
+                    name="memory_selector",
+                    arguments={
+                        "selected_count": 0,
+                        "rejected_count": 0,
+                        "selected_ids": [],
+                        "rejected_ids": [],
+                    },
+                    result="skipped memory selector",
+                )
+            )
+
+        try:
+            reply = await self._answer(
+                message,
+                recent_turns,
+                pin_memories,
+                selected,
+                plan,
+                now,
+            )
+        except httpx.HTTPError as error:
+            reply = "Tôi chưa gọi được mô hình trả lời lúc này. Ông thử lại sau một chút."
+            trace.append(
+                ToolTrace(
+                    name="answer_generation",
+                    arguments={"error_type": type(error).__name__},
+                    result="failed to generate answer",
+                )
+            )
+
+        curation = await self._curate_memory(
+            message,
+            reply,
+            recent_turns,
+            [*pin_memories, *candidates],
+            now,
+        )
+        applied, skipped = await _apply_curation(memory, message, curation)
+        trace.append(
+            ToolTrace(
+                name="memory_curator",
+                arguments={
+                    "operation_count": len(curation.operations),
+                    "operations": [op.model_dump() for op in curation.operations],
+                },
+                result=f"applied {applied} operation(s), skipped {skipped}",
+            )
+        )
+
+        await memory.add_turn("user", message)
+        await memory.add_turn("assistant", reply)
+
         return AgentResult(
-            reply=_content_text(content),
-            retrieved_facts=toolbox.retrieved_facts,
+            reply=reply,
+            retrieved_facts=[item.to_retrieved_fact() for item in selected],
             tool_trace=trace,
         )
 
-    def _local_now(self) -> datetime:
-        now = self.now_factory()
-        if now.tzinfo is None:
-            now = now.replace(tzinfo=LOCAL_TZ)
-        return now.astimezone(LOCAL_TZ)
+    async def _plan_memory(
+        self,
+        message: str,
+        recent_turns: list[ConversationTurn],
+        pin_memories: list[MemoryRecord],
+        now: datetime,
+    ) -> MemoryPlan:
+        prompt = _context_prompt(
+            message=message,
+            now=now,
+            recent_turns=recent_turns,
+            pin_memories=pin_memories,
+            selected_memories=[],
+        )
+        return await self._structured(
+            PLANNER_SYSTEM_PROMPT,
+            prompt,
+            MemoryPlan,
+            fallback=MemoryPlan(needs_memory=False, queries=[], reason="planner fallback"),
+        )
 
-    async def _generate(
-        self, contents: list[dict[str, Any]], tool_declarations: list[dict[str, Any]]
+    async def _select_memories(
+        self,
+        message: str,
+        recent_turns: list[ConversationTurn],
+        pin_memories: list[MemoryRecord],
+        candidates: list[MemoryRecord],
+        now: datetime,
+    ) -> MemorySelection:
+        prompt = (
+            _context_prompt(
+                message=message,
+                now=now,
+                recent_turns=recent_turns,
+                pin_memories=pin_memories,
+                selected_memories=[],
+            )
+            + "\nCandidate memories:\n"
+            + _memory_lines(candidates, include_ids=True)
+        )
+        return await self._structured(
+            SELECTOR_SYSTEM_PROMPT,
+            prompt,
+            MemorySelection,
+            fallback=MemorySelection(
+                selected_ids=[],
+                rejected_ids=[item.id for item in candidates],
+                reason="selector fallback",
+            ),
+        )
+
+    async def _answer(
+        self,
+        message: str,
+        recent_turns: list[ConversationTurn],
+        pin_memories: list[MemoryRecord],
+        selected: list[MemoryRecord],
+        plan: MemoryPlan,
+        now: datetime,
+    ) -> str:
+        prompt = (
+            _context_prompt(
+                message=message,
+                now=now,
+                recent_turns=recent_turns,
+                pin_memories=pin_memories,
+                selected_memories=selected,
+            )
+            + f"\nMemory needed: {plan.needs_memory}\n"
+            + f"Memory plan reason: {plan.reason}\n"
+        )
+        payload = await self._generate_text(ANSWER_SYSTEM_PROMPT, prompt)
+        text = _content_text(_first_content(payload)).strip()
+        return text or "Tôi chưa có đủ thông tin để trả lời chắc."
+
+    async def _curate_memory(
+        self,
+        message: str,
+        reply: str,
+        recent_turns: list[ConversationTurn],
+        known_memories: list[MemoryRecord],
+        now: datetime,
+    ) -> MemoryCuration:
+        prompt = (
+            f"Current local datetime: {now.isoformat()}\n"
+            f"Current user message:\n{message}\n\n"
+            f"Assistant reply:\n{reply}\n\n"
+            f"Recent conversation:\n{_turn_lines(recent_turns)}\n\n"
+            f"Existing memories that may be updated:\n"
+            f"{_memory_lines(known_memories, include_ids=True)}"
+        )
+        return await self._structured(
+            CURATOR_SYSTEM_PROMPT,
+            prompt,
+            MemoryCuration,
+            fallback=MemoryCuration(operations=[]),
+        )
+
+    async def _structured[T: BaseModel](
+        self,
+        system_prompt: str,
+        prompt: str,
+        response_model: type[T],
+        *,
+        fallback: T,
+    ) -> T:
+        try:
+            payload = await self._generate_text(
+                system_prompt,
+                prompt,
+                response_model=response_model,
+            )
+            text = _content_text(_first_content(payload))
+            return response_model.model_validate_json(text)
+        except (httpx.HTTPError, ValueError, json.JSONDecodeError):
+            return fallback
+
+    async def _generate_text(
+        self,
+        system_prompt: str,
+        prompt: str,
+        response_model: type[BaseModel] | None = None,
     ) -> dict[str, Any]:
         body: dict[str, Any] = {
-            "contents": contents,
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.2,
                 "maxOutputTokens": 4096,
                 "thinkingConfig": {"thinkingBudget": 0},
             },
-            "systemInstruction": {"parts": [{"text": AGENT_SYSTEM_PROMPT}]},
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
         }
-        if tool_declarations:
-            body["tools"] = [{"functionDeclarations": tool_declarations}]
-            body["toolConfig"] = {"functionCallingConfig": {"mode": "AUTO"}}
+        if response_model is not None:
+            body["generationConfig"]["responseMimeType"] = "application/json"
+            body["generationConfig"]["responseSchema"] = _gemini_response_schema(
+                response_model
+            )
 
-        async with httpx.AsyncClient(
-            timeout=120,
-            transport=self.transport,
-        ) as client:
+        async with httpx.AsyncClient(timeout=120, transport=self.transport) as client:
             response = await client.post(
                 _gemini_generate_content_url(self.base_url, self.model),
                 headers={
@@ -186,343 +375,103 @@ class AssistantClient:
             response.raise_for_status()
         return response.json()
 
+    def _local_now(self) -> datetime:
+        now = self.now_factory()
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=LOCAL_TZ)
+        return now.astimezone(LOCAL_TZ)
 
-class MemoryToolbox:
-    def __init__(
-        self, memory: Any, user_message: str, write_mode: str, now: datetime
-    ):
-        self.memory = memory
-        self.user_message = user_message
-        self.write_mode = write_mode
-        self.now = now
-        self.retrieved_facts: list[RetrievedFact] = []
-        self._saved_current_message = False
 
-    async def call(self, name: str, arguments: dict[str, Any]) -> ToolOutcome:
-        if name not in self.allowed_tool_names:
-            return ToolOutcome(
-                response={"status": "error", "message": f"Tool {name} is not allowed"},
-                summary=f"{name} is not allowed",
+async def _apply_curation(
+    memory: MemoryStore,
+    source_message: str,
+    curation: MemoryCuration,
+) -> tuple[int, int]:
+    applied = 0
+    skipped = 0
+    for operation in curation.operations:
+        if operation.op == "ignore":
+            continue
+        if operation.op == "create":
+            if not operation.text.strip():
+                skipped += 1
+                continue
+            await memory.add_memory(
+                text=operation.text.strip(),
+                memory_type=operation.memory_type,
+                source_message=source_message,
             )
-
-        if name == "search_memory":
-            return await self._search_memory(arguments)
-        if name == "remember_current_message":
-            return await self._remember_current_message()
-        if name == "remember_fact":
-            return await self._remember_fact(arguments)
-        if name == "cancel_matching_facts":
-            return await self._cancel_matching_facts(arguments)
-
-        return ToolOutcome(
-            response={"status": "error", "message": f"Unknown tool {name}"},
-            summary=f"unknown tool {name}",
-        )
-
-    @property
-    def allowed_tool_names(self) -> set[str]:
-        names = {"search_memory", "cancel_matching_facts"}
-        if self.write_mode in {"exact", "both"}:
-            names.add("remember_current_message")
-        if self.write_mode in {"model", "both"}:
-            names.add("remember_fact")
-        return names
-
-    async def _search_memory(self, arguments: dict[str, Any]) -> ToolOutcome:
-        query = _string_arg(arguments, "query") or self.user_message
-        date_value = _string_arg(arguments, "date")
-        if date_value and hasattr(self.memory, "manual_facts_for_date"):
-            manual_facts = await self.memory.manual_facts_for_date(date_value)
-            self._add_retrieved_facts(manual_facts)
-            return ToolOutcome(
-                response={
-                    "status": "ok",
-                    "count": len(manual_facts),
-                    "facts": _facts_to_dicts(manual_facts),
-                },
-                summary=f"retrieved {len(manual_facts)} active fact(s)",
+            applied += 1
+            continue
+        if operation.op == "supersede":
+            if not operation.replaces_id or not operation.text.strip():
+                skipped += 1
+                continue
+            replacement = await memory.supersede_memory(
+                operation.replaces_id,
+                replacement_text=operation.text.strip(),
+                memory_type=operation.memory_type,
+                source_message=source_message,
             )
-
-        edges = await self._search_edges(query, date_value)
-        facts = self.memory.edges_to_facts(edges)
-        if date_value:
-            facts = filter_active_facts_for_date(facts, date_value, self.now)
-            if hasattr(self.memory, "manual_facts_for_date"):
-                facts.extend(await self.memory.manual_facts_for_date(date_value))
-        else:
-            facts.extend(await self._search_companion_memories(query, broad=False))
-            facts = filter_active_facts(facts, self.now)
-        facts = _dedupe_facts(facts)
-
-        if (
-            not facts
-            and not date_value
-            and _looks_like_memory_question(f"{self.user_message} {query}")
-        ):
-            edges = await self._search_edges(query, date_value, broad=True)
-            facts = self.memory.edges_to_facts(edges)
-            facts.extend(await self._search_companion_memories(query, broad=True))
-            facts = _dedupe_facts(filter_active_facts(facts, self.now))
-
-        self._add_retrieved_facts(facts)
-        return ToolOutcome(
-            response={
-                "status": "ok",
-                "count": len(facts),
-                "facts": _facts_to_dicts(facts),
-            },
-            summary=f"retrieved {len(facts)} active fact(s)",
-        )
-
-    async def _remember_current_message(self) -> ToolOutcome:
-        if self._saved_current_message:
-            return ToolOutcome(
-                response={"status": "ok", "saved": False, "reason": "already_saved"},
-                summary="current message was already saved",
-            )
-
-        saved_manually = await self._save_temporal_manual_fact(self.user_message)
-        if saved_manually:
-            self._saved_current_message = True
-            return ToolOutcome(
-                response={
-                    "status": "ok",
-                    "saved": True,
-                    "saved_as": "manual_temporal_fact",
-                },
-                summary="saved manual temporal memory",
-            )
-
-        await self.memory.add_user_message(self._current_message_for_memory())
-        self._saved_current_message = True
-        return ToolOutcome(
-            response={"status": "ok", "saved": True},
-            summary="saved current user message",
-        )
-
-    async def _remember_fact(self, arguments: dict[str, Any]) -> ToolOutcome:
-        memory_text = _string_arg(arguments, "memory_text")
-        if not memory_text:
-            return ToolOutcome(
-                response={"status": "error", "message": "memory_text is required"},
-                summary="memory_text is required",
-            )
-
-        if self.write_mode == "both" and _looks_temporal_memory(
-            f"{self.user_message} {memory_text}"
-        ):
-            await self._save_temporal_manual_fact(memory_text)
-            self._saved_current_message = True
-            return ToolOutcome(
-                response={
-                    "status": "ok",
-                    "saved": True,
-                    "saved_as": "manual_temporal_fact",
-                },
-                summary="saved manual temporal memory",
-            )
-
-        await self.memory.add_memory_fact(memory_text)
-        return ToolOutcome(
-            response={"status": "ok", "saved": True},
-            summary="saved model-authored memory",
-        )
-
-    async def _cancel_matching_facts(self, arguments: dict[str, Any]) -> ToolOutcome:
-        query = _string_arg(arguments, "query") or self.user_message
-        date_value = _string_arg(arguments, "date")
-        cancel_text = f"{self.user_message} {query}".strip()
-        manual_invalidated = 0
-        if date_value and hasattr(self.memory, "invalidate_matching_manual_facts"):
-            manual_invalidated = await self.memory.invalidate_matching_manual_facts(
-                cancel_text,
-                date_value,
-            )
-            return ToolOutcome(
-                response={
-                    "status": "ok",
-                    "matched_count": manual_invalidated,
-                    "invalidated_count": manual_invalidated,
-                    "matched_facts": [],
-                },
-                summary=f"invalidated {manual_invalidated} matching fact(s)",
-            )
-
-        edges = await self._search_edges(query, date_value)
-        facts = self.memory.edges_to_facts(edges)
-        selected_edges = []
-        selected_facts = []
-        for edge, fact in zip(edges, facts, strict=False):
-            if _fact_matches_tool_date(fact, date_value, self.now):
-                selected_edges.append(edge)
-                selected_facts.append(fact)
-
-        invalidated = await self.memory.invalidate_matching_facts(
-            cancel_text, selected_edges
-        )
-        invalidated += manual_invalidated
-        if not date_value and hasattr(
-            self.memory, "invalidate_matching_companion_memories"
-        ):
-            companion_facts = await self._search_companion_memories(query, broad=False)
-            invalidated += await self.memory.invalidate_matching_companion_memories(
-                cancel_text,
-                companion_facts,
-            )
-        return ToolOutcome(
-            response={
-                "status": "ok",
-                "matched_count": len(selected_facts),
-                "invalidated_count": invalidated,
-                "matched_facts": _facts_to_dicts(selected_facts),
-            },
-            summary=f"invalidated {invalidated} matching fact(s)",
-        )
-
-    async def _search_edges(
-        self, query: str, date_value: str, *, broad: bool = False
-    ) -> list[Any]:
-        edges_by_key: dict[Any, Any] = {}
-        for search_query in _search_queries(
-            query, date_value, self.user_message, broad=broad
-        ):
-            for edge in await self.memory.search_edges(search_query):
-                edges_by_key.setdefault(_edge_key(edge), edge)
-        return list(edges_by_key.values())
-
-    async def _search_companion_memories(
-        self, query: str, *, broad: bool
-    ) -> list[RetrievedFact]:
-        if not hasattr(self.memory, "search_companion_memories"):
-            return []
-
-        facts_by_key: dict[tuple[str, str | None, str | None], RetrievedFact] = {}
-        for search_query in _search_queries(
-            query, "", self.user_message, broad=broad
-        ):
-            for fact in await self.memory.search_companion_memories(search_query):
-                facts_by_key.setdefault(
-                    (fact.fact, fact.valid_at, fact.invalid_at),
-                    fact,
-                )
-        return list(facts_by_key.values())
-
-    def _current_message_for_memory(self) -> str:
-        if self.write_mode == "both" and _looks_temporal_memory(self.user_message):
-            return _normalize_relative_dates(self.user_message, self.now)
-        return self.user_message
-
-    async def _save_temporal_manual_fact(self, fact_text: str) -> bool:
-        if self.write_mode != "both" or not hasattr(self.memory, "add_manual_fact"):
-            return False
-        if not _looks_temporal_memory(fact_text):
-            return False
-
-        normalized = _normalize_relative_dates(fact_text, self.now)
-        valid_at = _extract_memory_datetime(normalized, self.now)
-        if valid_at is None:
-            return False
-
-        await self.memory.add_manual_fact(normalized, valid_at)
-        return True
-
-    def _add_retrieved_facts(self, facts: list[RetrievedFact]) -> None:
-        existing = {
-            (fact.fact, fact.valid_at, fact.invalid_at) for fact in self.retrieved_facts
-        }
-        for fact in facts:
-            key = (fact.fact, fact.valid_at, fact.invalid_at)
-            if key not in existing:
-                self.retrieved_facts.append(fact)
-                existing.add(key)
+            applied += 1 if replacement is not None else 0
+            skipped += 0 if replacement is not None else 1
+            continue
+        if operation.op == "delete":
+            if not operation.replaces_id:
+                skipped += 1
+                continue
+            deleted = await memory.delete_memory(operation.replaces_id)
+            applied += 1 if deleted else 0
+            skipped += 0 if deleted else 1
+            continue
+    return applied, skipped
 
 
-def build_tool_declarations(memory_write_mode: str) -> list[dict[str, Any]]:
-    declarations = [
-        {
-            "name": "search_memory",
-            "description": (
-                "Search Graphiti memory for relevant active personal facts, debts, "
-                "or scheduled events before answering memory questions."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search query in the user's language.",
-                    },
-                    "date": {
-                        "type": "string",
-                        "description": (
-                            "Optional local date filter in YYYY-MM-DD. Use for "
-                            "schedule questions like tomorrow."
-                        ),
-                    },
-                },
-                "required": ["query"],
-            },
-        },
-        {
-            "name": "cancel_matching_facts",
-            "description": (
-                "Invalidate active memory facts or events that the current user "
-                "message cancels or replaces."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "Search terms for the memory to cancel.",
-                    },
-                    "date": {
-                        "type": "string",
-                        "description": "Optional local date filter in YYYY-MM-DD.",
-                    },
-                },
-                "required": ["query"],
-            },
-        },
-    ]
+def _clean_queries(plan: MemoryPlan) -> list[str]:
+    if not plan.needs_memory:
+        return []
+    queries = []
+    seen = set()
+    for query in plan.queries:
+        normalized = query.strip()
+        if normalized and normalized not in seen:
+            queries.append(normalized)
+            seen.add(normalized)
+    return queries[:3]
 
-    if memory_write_mode in {"exact", "both"}:
-        declarations.append(
-            {
-                "name": "remember_current_message",
-                "description": (
-                    "Store the exact current user message as a Graphiti episode. "
-                    "Use for durable facts or scheduled events stated by the user."
-                ),
-                "parameters": {"type": "object", "properties": {}, "required": []},
-            }
-        )
 
-    if memory_write_mode in {"model", "both"}:
-        declarations.append(
-            {
-                "name": "remember_fact",
-                "description": (
-                    "Store a concise memory fact or event derived only from the "
-                    "current user message."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "memory_text": {
-                            "type": "string",
-                            "description": (
-                                "The fact/event to store, preserving names, "
-                                "amounts, dates, times, and debt direction."
-                            ),
-                        }
-                    },
-                    "required": ["memory_text"],
-                },
-            }
-        )
+def _context_prompt(
+    *,
+    message: str,
+    now: datetime,
+    recent_turns: list[ConversationTurn],
+    pin_memories: list[MemoryRecord],
+    selected_memories: list[MemoryRecord],
+) -> str:
+    return (
+        f"Current local datetime: {now.isoformat()}\n"
+        f"Current local date: {now.date().isoformat()}\n\n"
+        f"Recent conversation:\n{_turn_lines(recent_turns)}\n\n"
+        f"Pinned memories:\n{_memory_lines(pin_memories, include_ids=False)}\n\n"
+        f"Selected memories:\n{_memory_lines(selected_memories, include_ids=False)}\n\n"
+        f"Current user message:\n{message}"
+    )
 
-    return declarations
+
+def _turn_lines(turns: list[ConversationTurn]) -> str:
+    if not turns:
+        return "(none)"
+    return "\n".join(f"- {turn.role}: {turn.content}" for turn in turns)
+
+
+def _memory_lines(memories: list[MemoryRecord], *, include_ids: bool) -> str:
+    if not memories:
+        return "(none)"
+    lines = []
+    for memory in memories:
+        prefix = f"- [{memory.id}] " if include_ids else "- "
+        lines.append(f"{prefix}{memory.text} (type={memory.memory_type})")
+    return "\n".join(lines)
 
 
 def _first_content(payload: dict[str, Any]) -> dict[str, Any]:
@@ -530,28 +479,6 @@ def _first_content(payload: dict[str, Any]) -> dict[str, Any]:
     if not candidates:
         return {"role": "model", "parts": []}
     return candidates[0].get("content") or {"role": "model", "parts": []}
-
-
-def _extract_function_calls(content: dict[str, Any]) -> list[dict[str, Any]]:
-    calls = []
-    for part in content.get("parts") or []:
-        function_call = part.get("functionCall") or part.get("function_call")
-        if isinstance(function_call, dict):
-            calls.append(function_call)
-    return calls
-
-
-def _function_arguments(function_call: dict[str, Any]) -> dict[str, Any]:
-    arguments = function_call.get("args", function_call.get("arguments", {}))
-    if isinstance(arguments, dict):
-        return arguments
-    if isinstance(arguments, str):
-        try:
-            parsed = json.loads(arguments)
-        except json.JSONDecodeError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
 
 
 def _content_text(content: dict[str, Any]) -> str:
@@ -563,218 +490,63 @@ def _content_text(content: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _string_arg(arguments: dict[str, Any], name: str) -> str:
-    value = arguments.get(name)
-    return value.strip() if isinstance(value, str) else ""
-
-
-def _fact_matches_tool_date(
-    fact: RetrievedFact, date_value: str, now: datetime
-) -> bool:
-    if date_value:
-        return bool(filter_active_facts_for_date([fact], date_value, now))
-    return bool(filter_active_facts([fact], now))
-
-
-def _search_queries(
-    query: str, date_value: str, user_message: str, *, broad: bool = False
-) -> list[str]:
-    queries = [query]
-    if date_value:
-        queries.extend(
-            [
-                f"{query} {date_value}",
-                f"{user_message} {date_value}",
-                f"lịch trình sự kiện kế hoạch ngày {date_value}",
-            ]
-        )
-    elif broad:
-        queries.extend(
-            [
-                user_message,
-                "sở thích của user",
-                "điều user không thích",
-                "thói quen của user",
-                "bối cảnh cá nhân của user",
-                "mục tiêu hiện tại của user",
-                "người liên quan với user",
-                "cảm xúc gần đây của user",
-                "áp lực stress buồn mệt lo lắng cảm xúc",
-                "cách hỗ trợ user",
-                "cách xưng hô với user",
-                "phong cách trả lời user muốn",
-                "ăn uống món ăn đồ uống cà phê rau mùi không thích dị ứng",
-                "so thich khong thich thoi quen ca phe rau mui di ung",
-                "ap luc stress buon met lo lang cam xuc ho tro",
-                "muc tieu du dinh dang co gang",
-                "anh chi ban nguoi yeu dong nghiep nguoi lien quan",
-                "user personal preferences dislikes goals relationships emotions",
-            ]
-        )
-
-    deduped = []
-    seen = set()
-    for item in queries:
-        normalized = item.strip()
-        if normalized and normalized not in seen:
-            deduped.append(normalized)
-            seen.add(normalized)
-    return deduped
-
-
-def _looks_temporal_memory(text: str) -> bool:
-    normalized = text.lower()
-    if re.search(r"\b\d{4}-\d{2}-\d{2}\b", normalized):
-        return True
-    markers = (
-        "ngày mai",
-        "mai",
-        "hôm nay",
-        "hôm qua",
-        "sáng",
-        "chiều",
-        "tối",
-        "giờ",
-        "lúc",
-        "tomorrow",
-        "today",
-        "yesterday",
-    )
-    return any(marker in normalized for marker in markers)
-
-
-def _looks_like_memory_question(text: str) -> bool:
-    normalized = text.lower()
-    markers = (
-        "tôi",
-        "toi",
-        "tui",
-        "tao",
-        "mình",
-        "minh",
-        "sở thích",
-        "so thich",
-        "thích",
-        "thich",
-        "không thích",
-        "khong thich",
-        "ghét",
-        "ghet",
-        "nhớ",
-        "nho",
-        "memory",
-        "cảm xúc",
-        "cam xuc",
-        "buồn",
-        "buon",
-        "áp lực",
-        "ap luc",
-        "stress",
-        "mục tiêu",
-        "muc tieu",
-        "bạn tôi",
-        "ban toi",
-        "người yêu",
-        "nguoi yeu",
-        "xưng hô",
-        "xung ho",
-        "gọi",
-        "goi",
-    )
-    return any(marker in normalized for marker in markers)
-
-
-async def _load_pinned_facts(memory: Any) -> list[RetrievedFact]:
-    if not hasattr(memory, "pinned_memories"):
-        return []
-    return await memory.pinned_memories()
-
-
-def _pinned_context_text(facts: list[RetrievedFact]) -> str:
-    if not facts:
-        return ""
-    lines = "\n".join(f"- {fact.fact}" for fact in facts)
-    return f"Always relevant user memory:\n{lines}\n\n"
-
-
-def _normalize_relative_dates(text: str, now: datetime) -> str:
-    tomorrow = (now.date()).toordinal() + 1
-    tomorrow_text = datetime.fromordinal(tomorrow).date().isoformat()
-    normalized = re.sub(
-        r"\bngày\s+mai\b",
-        f"ngày {tomorrow_text}",
-        text,
-        flags=re.IGNORECASE,
-    )
-    normalized = re.sub(
-        r"\bngay\s+mai\b",
-        f"ngay {tomorrow_text}",
-        normalized,
-        flags=re.IGNORECASE,
-    )
-    normalized = re.sub(
-        r"(?<!ngày\s)(?<!ngay\s)\bmai\b",
-        f"ngày {tomorrow_text}",
-        normalized,
-        flags=re.IGNORECASE,
-    )
-    return normalized
-
-
-def _edge_key(edge: Any) -> Any:
-    return getattr(edge, "uuid", None) or (
-        getattr(edge, "fact", None),
-        getattr(edge, "valid_at", None),
-        getattr(edge, "invalid_at", None),
-    )
-
-
-def _facts_to_dicts(facts: list[RetrievedFact]) -> list[dict[str, Any]]:
-    return [fact.model_dump() for fact in facts]
-
-
-def _dedupe_facts(facts: list[RetrievedFact]) -> list[RetrievedFact]:
-    deduped = []
-    seen = set()
-    for fact in facts:
-        key = (fact.fact, fact.valid_at, fact.invalid_at)
-        if key in seen:
-            continue
-        deduped.append(fact)
-        seen.add(key)
-    return deduped
-
-
-def _extract_memory_datetime(text: str, now: datetime) -> datetime | None:
-    date_match = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", text)
-    if not date_match:
-        return None
-
-    hour = 0
-    minute = 0
-    time_match = re.search(
-        r"\b(\d{1,2})(?::(\d{1,2})|\s*(?:giờ|gio|h)\b)",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if time_match:
-        hour = int(time_match.group(1))
-        minute = int(time_match.group(2) or 0)
-
-    lowered = text.lower()
-    if hour < 12 and any(
-        marker in lowered for marker in ("chiều", "chieu", "tối", "toi", "pm")
-    ):
-        hour += 12
-
-    parsed = datetime.fromisoformat(
-        f"{date_match.group(1)}T{hour:02d}:{minute:02d}:00"
-    )
-    return parsed.replace(tzinfo=now.tzinfo or LOCAL_TZ)
-
-
 def _gemini_generate_content_url(base_url: str | None, model: str) -> str:
     root = (base_url or "http://127.0.0.1:8317/v1").rstrip("/")
     if root.endswith("/v1"):
         root = root[:-3]
     return f"{root}/v1beta/models/{model}:generateContent"
+
+
+def _gemini_response_schema(response_model: type[BaseModel]) -> dict[str, Any]:
+    schema = deepcopy(response_model.model_json_schema())
+    defs = schema.pop("$defs", {})
+    _inline_schema_refs(schema, defs)
+    _strip_schema_metadata(schema)
+    _disallow_extra_properties(schema)
+    return schema
+
+
+def _inline_schema_refs(value: Any, defs: dict[str, Any]) -> None:
+    if isinstance(value, list):
+        for item in value:
+            _inline_schema_refs(item, defs)
+        return
+    if not isinstance(value, dict):
+        return
+
+    ref = value.pop("$ref", None)
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        target = deepcopy(defs[ref.removeprefix("#/$defs/")])
+        value.clear()
+        value.update(target)
+
+    for item in value.values():
+        _inline_schema_refs(item, defs)
+
+
+def _strip_schema_metadata(value: Any) -> None:
+    if isinstance(value, list):
+        for item in value:
+            _strip_schema_metadata(item)
+        return
+    if not isinstance(value, dict):
+        return
+
+    value.pop("title", None)
+    value.pop("default", None)
+    for item in value.values():
+        _strip_schema_metadata(item)
+
+
+def _disallow_extra_properties(value: Any) -> None:
+    if isinstance(value, list):
+        for item in value:
+            _disallow_extra_properties(item)
+        return
+    if not isinstance(value, dict):
+        return
+
+    if value.get("type") == "object":
+        value.setdefault("additionalProperties", False)
+    for item in value.values():
+        _disallow_extra_properties(item)

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "description": "Natural smoke scenarios for daily Vietnamese companion memory.",
+  "cases": [
+    {
+      "id": "smoke_daily_preference",
+      "category": "daily_preference",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Nhớ giúp tui: khi đi làm ở quán cà phê, tui thích chỗ yên tĩnh, ít nhạc và có ổ cắm.",
+        "Quán đông người quá là tui khó tập trung."
+      ],
+      "probe_message": "Cuối tuần muốn ra ngoài làm việc thì nên chọn quán kiểu gì cho hợp tui?",
+      "expected_memory": ["quán cà phê yên tĩnh", "ít nhạc", "có ổ cắm"],
+      "forbidden_memory": ["quán đông người"],
+      "judge_notes": "Answer should use the remembered cafe preference, not generic cafe advice."
+    },
+    {
+      "id": "smoke_study_context",
+      "category": "work_study",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Tuần này tui đang làm bài báo cáo tốt nghiệp.",
+        "Phần thiết kế sản phẩm là phần tui thấy khó nhất, nên tui muốn xử lý từng đoạn nhỏ."
+      ],
+      "probe_message": "Tối nay làm báo cáo thì nên tập trung kiểu gì để đỡ quá tải?",
+      "expected_memory": ["bài báo cáo tốt nghiệp", "phần thiết kế sản phẩm", "từng đoạn nhỏ"],
+      "forbidden_memory": ["làm hết một lần"],
+      "judge_notes": "Answer should recall the user's current study/work context and suggest a small next step."
+    },
+    {
+      "id": "smoke_social_memory",
+      "category": "relationship",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Anh Tú là người hay chơi game chung với tui cuối tuần.",
+        "Nếu tui nhắc anh Tú thì thường là đang nói chuyện lịch chơi game."
+      ],
+      "probe_message": "Anh Tú là ai trong mấy chuyện tui hay nhắc?",
+      "expected_memory": ["chơi game chung", "cuối tuần"],
+      "forbidden_memory": ["đồng nghiệp", "người yêu"],
+      "judge_notes": "Answer should identify the remembered relationship without inventing details."
+    },
+    {
+      "id": "smoke_emotional_continuity",
+      "category": "emotional_context",
+      "critical": false,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Mấy hôm nay tui hơi nản vì làm báo cáo cứ sửa phần này lại vướng phần khác.",
+        "Khi tui bị vậy, tui cần ông nói thẳng bước tiếp theo chứ đừng động viên sáo rỗng."
+      ],
+      "probe_message": "Nếu tui lại kẹt bài báo cáo thì ông nên phản hồi kiểu gì?",
+      "expected_memory": ["nói thẳng bước tiếp theo", "đừng động viên sáo rỗng"],
+      "forbidden_memory": ["động viên sáo rỗng"],
+      "judge_notes": "Answer should apply the remembered support style."
+    },
+    {
+      "id": "smoke_correction_update",
+      "category": "correction_update",
+      "critical": true,
+      "should_retrieve": true,
+      "seed_messages": [
+        "Trước giờ buổi tối tui hay uống trà sữa.",
+        "Cập nhật lại nha: buổi tối tui chuyển sang trà nóng ít đường để dễ ngủ hơn."
+      ],
+      "probe_message": "Tối nay nên pha đồ uống gì theo thói quen mới của tui?",
+      "expected_memory": ["trà nóng ít đường", "dễ ngủ hơn"],
+      "forbidden_memory": ["trà sữa"],
+      "judge_notes": "Answer should use the corrected newer preference, not the old one."
+    },
+    {
+      "id": "smoke_no_memory_question",
+      "category": "no_memory",
+      "critical": true,
+      "should_retrieve": false,
+      "seed_messages": [
+        "Tui đang tiết kiệm tiền nên thích món ăn dưới 50k."
+      ],
+      "probe_message": "Dịch câu 'I will call you after dinner' sang tiếng Việt giúp tui.",
+      "expected_memory": [],
+      "forbidden_memory": ["tiết kiệm tiền", "dưới 50k"],
+      "judge_notes": "This is a translation request. The answer should not pull unrelated personal memory into the response."
+    }
+  ]
+}

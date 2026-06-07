@@ -14,7 +14,7 @@ import httpx
 from dotenv import load_dotenv
 
 
-SCENARIO_PATH = Path(__file__).with_name("live_scenarios.json")
+SCENARIO_PATH = Path(__file__).with_name("target_scenarios.json")
 REPORT_DIR = Path(__file__).with_name("reports")
 
 REQUIRED_CASE_FIELDS = {
@@ -94,7 +94,7 @@ def main() -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run live memory evals against the Graphiti Chat Lab API."
+        description="Run live memory evals against the chat memory API."
     )
     parser.add_argument(
         "--base-url",
@@ -105,7 +105,10 @@ def parse_args() -> argparse.Namespace:
         "--scenarios",
         type=Path,
         default=SCENARIO_PATH,
-        help="Scenario JSON path.",
+        help=(
+            "Scenario JSON path. Defaults to the target natural-conversation suite; "
+            "use evals/natural_smoke_scenarios.json for a shorter smoke check."
+        ),
     )
     parser.add_argument(
         "--output-dir",
@@ -119,9 +122,14 @@ def parse_args() -> argparse.Namespace:
         help="Report file suffix.",
     )
     parser.add_argument(
+        "--memory-group-id",
+        default=None,
+        help="Optional app MEMORY_GROUP_ID to record in the report metadata.",
+    )
+    parser.add_argument(
         "--graphiti-group-id",
         default=None,
-        help="Optional app GRAPHITI_GROUP_ID to record in the report metadata.",
+        help="Deprecated alias for --memory-group-id.",
     )
     parser.add_argument(
         "--timeout",
@@ -203,9 +211,9 @@ def validate_cases(cases: list[dict[str, Any]]) -> list[str]:
 def print_suite_summary(cases: list[dict[str, Any]]) -> None:
     by_category = Counter(case["category"] for case in cases)
     critical = sum(1 for case in cases if case["critical"])
-    print(f"loaded {len(cases)} cases ({critical} critical)")
+    print(f"loaded {len(cases)} cases ({critical} critical)", flush=True)
     for category, count in sorted(by_category.items()):
-        print(f"- {category}: {count}")
+        print(f"- {category}: {count}", flush=True)
 
 
 def missing_judge_env() -> list[str]:
@@ -220,16 +228,19 @@ async def run_suite(
     known_memory_context: list[str] = []
     async with httpx.AsyncClient(timeout=args.timeout) as client:
         for index, case in enumerate(cases, start=1):
-            print(f"[{index:02d}/{len(cases):02d}] {case['id']} {case['category']}")
+            print(
+                f"[{index:02d}/{len(cases):02d}] {case['id']} {case['category']}",
+                flush=True,
+            )
             result = await run_case(client, case, args, known_memory_context)
             results.append(result)
             known_memory_context.extend(case["seed_messages"])
             judge = result.get("judge") or {}
             if judge:
                 status = "PASS" if judge.get("passed") else "FAIL"
-                print(f"  {status}: {judge.get('reason', '')}")
+                print(f"  {status}: {judge.get('reason', '')}", flush=True)
             else:
-                print("  collected raw result")
+                print("  collected raw result", flush=True)
     return results
 
 
@@ -408,7 +419,10 @@ def write_reports(results: list[dict[str, Any]], args: argparse.Namespace) -> No
         "run_id": args.run_id,
         "created_at": datetime.now().isoformat(),
         "base_url": args.base_url,
-        "graphiti_group_id": args.graphiti_group_id or os.getenv("GRAPHITI_GROUP_ID"),
+        "memory_group_id": args.memory_group_id
+        or args.graphiti_group_id
+        or os.getenv("MEMORY_GROUP_ID")
+        or os.getenv("GRAPHITI_GROUP_ID"),
         "summary": summarize(results),
         "results": results,
     }
@@ -417,8 +431,8 @@ def write_reports(results: list[dict[str, Any]], args: argparse.Namespace) -> No
         encoding="utf-8",
     )
     md_path.write_text(render_markdown(report), encoding="utf-8")
-    print(f"wrote {json_path}")
-    print(f"wrote {md_path}")
+    print(f"wrote {json_path}", flush=True)
+    print(f"wrote {md_path}", flush=True)
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -474,7 +488,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
         f"- Created: {report['created_at']}",
         f"- Base URL: `{report['base_url']}`",
-        f"- GRAPHITI_GROUP_ID: `{report.get('graphiti_group_id')}`",
+        f"- MEMORY_GROUP_ID: `{report.get('memory_group_id')}`",
         f"- Demo ready: **{summary['demo_ready']}**",
         f"- Pass rate: {summary['passed']}/{summary['total']} ({summary['pass_rate']:.0%})",
         (
